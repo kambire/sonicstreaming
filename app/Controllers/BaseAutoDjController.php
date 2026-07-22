@@ -269,21 +269,36 @@ abstract class BaseAutoDjController extends Controller
         }
 
         $mediaDir = $this->autodj->mediaDir($sid);
-        $targetFile = $mediaDir . '/live_mic_' . time() . '.mp3';
+        $timestamp = time();
+        $rawPath = $mediaDir . '/raw_mic_' . $timestamp . '.webm';
+        $targetFile = $mediaDir . '/live_mic_' . $timestamp . '.mp3';
 
         $tmpPath = $_FILES['mic_audio']['tmp_name'];
-        $moved = @move_uploaded_file($tmpPath, $targetFile) || @copy($tmpPath, $targetFile);
+        $uploaded = @move_uploaded_file($tmpPath, $rawPath) || @copy($tmpPath, $rawPath);
 
-        if ($moved) {
-            $pushed = $this->autodj->pushLiveMic($station, $targetFile);
+        if ($uploaded) {
+            // Procesamiento profesional con FFmpeg (Filtro Radio FM: Low-cut highpass 80Hz + Compresor + Normalización Loudnorm EBU R128 + 192k MP3)
+            $ffmpegCmd = sprintf(
+                'ffmpeg -y -i %s -af %s -c:a libmp3lame -b:a 192k -ar 44100 %s 2>&1',
+                escapeshellarg($rawPath),
+                escapeshellarg('highpass=f=80,compand=attacks=0.02:decays=0.2:points=-60/-60|-24/-12|-8/-3|0/0:gain=3,loudnorm=I=-16:TP=-1.5:LRA=11'),
+                escapeshellarg($targetFile)
+            );
+            @exec($ffmpegCmd, $out, $ret);
+
+            $finalFile = ($ret === 0 && file_exists($targetFile)) ? $targetFile : $rawPath;
+            $pushed = $this->autodj->pushLiveMic($station, $finalFile);
+
+            @unlink($rawPath); // Limpieza de archivo crudo temporal
+
             if ($pushed) {
                 ActivityLog::record('autodj_live_mic', 'Station #' . $sid);
-                $this->json(['ok' => true, 'message' => '¡Voz transmitida al aire con atenuación de música!']);
+                $this->json(['ok' => true, 'message' => '¡Voz procesada en calidad de estudio y transmitida al aire!']);
                 return;
             }
         }
 
-        $this->json(['ok' => false, 'message' => 'Error al procesar el audio del micrófono en el servidor.'], 500);
+        $this->json(['ok' => false, 'message' => 'Error al procesar y masterizar el audio en el servidor.'], 500);
     }
 
     public function start(Request $request, string $id): void
