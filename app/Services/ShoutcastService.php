@@ -53,7 +53,7 @@ final class ShoutcastService
         if ($rawRelay !== '') {
             $autodjService = new AutoDjService();
             $resolvedRelay = $autodjService->resolveRelayUrl($rawRelay);
-            if (($station['type'] ?? 'live') === 'relay') {
+            if ($resolvedRelay !== '') {
                 $relayLine = 'streamrelayurl_1=' . $resolvedRelay;
             }
         }
