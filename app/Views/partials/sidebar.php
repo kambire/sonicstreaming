@@ -71,9 +71,9 @@ if (preg_match('#/(stations)/(\d+)#', $currentPath, $m)) {
                 <i class="bi bi-mic-fill me-2"></i> 🎙️ Hablar en Vivo
             </button>
 
-            <button type="button" class="nav-link ps-4 w-100 text-start border-0 bg-transparent text-success fw-bold" data-bs-toggle="modal" data-bs-target="#relayConfigModal">
-                <i class="bi bi-arrow-repeat me-2"></i> 🔄 Re-transmisión / Relay
-            </button>
+            <a class="nav-link ps-4 <?= nav_active('/relay') ? 'active' : '' ?>" href="<?= url($baseRole . '/stations/' . $activeStationId . '/relay') ?>">
+                <i class="bi bi-arrow-repeat me-2 text-success"></i> 🔄 Re-transmisión / Relay
+            </a>
 
             <a class="nav-link ps-4 <?= nav_active('/analytics') ?>" href="<?= url($baseRole . '/stations/' . $activeStationId . '/analytics') ?>">
                 <i class="bi bi-globe-americas me-2 text-info"></i> Analíticas & Mapa

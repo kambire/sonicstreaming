@@ -73,6 +73,8 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/stop', 'Admin\\StationController@stop', [$csrf]);
         $r->post('/admin/stations/{id}/restart', 'Admin\\StationController@restart', [$csrf]);
         $r->post('/admin/stations/{id}/settings', 'Client\\StationController@updateSettings', [$csrf]);
+        $r->get('/admin/stations/{id}/relay', 'Client\\RelayController@index');
+        $r->post('/admin/stations/{id}/relay', 'Client\\RelayController@update', [$csrf]);
 
         // AutoDJ (admin)
         $r->get('/admin/stations/{id}/autodj', 'Admin\\AutoDjController@index');
@@ -144,6 +146,10 @@ return function (Router $router): void {
         // Analiticas (cliente)
         $r->get('/client/stations/{id}/analytics', 'Client\\AnalyticsController@index');
         $r->get('/client/stations/{id}/analytics/api', 'Client\\AnalyticsController@apiData');
+
+        // Relay & Horarios (cliente)
+        $r->get('/client/stations/{id}/relay', 'Client\\RelayController@index');
+        $r->post('/client/stations/{id}/relay', 'Client\\RelayController@update', [$csrf]);
     });
 
     // ---------------------------------------------------------------
@@ -161,6 +167,8 @@ return function (Router $router): void {
         $r->post('/reseller/stations/{id}/stop', 'Reseller\\StationController@stop', [$csrf]);
         $r->post('/reseller/stations/{id}/restart', 'Reseller\\StationController@restart', [$csrf]);
         $r->post('/reseller/stations/{id}/settings', 'Client\\StationController@updateSettings', [$csrf]);
+        $r->get('/reseller/stations/{id}/relay', 'Client\\RelayController@index');
+        $r->post('/reseller/stations/{id}/relay', 'Client\\RelayController@update', [$csrf]);
 
         // AutoDJ (reseller)
         $r->get('/reseller/stations/{id}/autodj', 'Reseller\\AutoDjController@index');

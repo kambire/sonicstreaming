@@ -212,19 +212,39 @@ final class AutoDjService
         $liq .= "end\n\n";
 
         $rawRelayUrl = trim((string) ($station['relay_url'] ?? ''));
-        $relayUrl = $this->resolveRelayUrl($rawRelayUrl);
+        $relayUrl    = $this->resolveRelayUrl($rawRelayUrl);
+        $relayMode   = (string) ($station['relay_mode'] ?? 'fulltime');
+        $startHour   = trim((string) ($station['relay_start_hour'] ?? ''));
+        $endHour     = trim((string) ($station['relay_end_hour'] ?? ''));
 
         $sourcesList = ['live'];
-
         $autodjRunning = ((int) ($station['autodj_enabled'] ?? 0) === 1 && (string) ($station['autodj_status'] ?? 'stopped') === 'running');
+
         if ($autodjRunning) {
             $sourcesList[] = 'mksafe(autodj_mic)';
         }
 
-        if ($relayUrl !== '') {
+        if ($relayUrl !== '' && $relayMode !== 'disabled') {
             $liq .= "# Fuente de retransmision Relay externa con decodificador universal FFmpeg\n";
             $liq .= "relay_stream = mksafe(input.ffmpeg(\"{$relayUrl}\"))\n\n";
-            $sourcesList[] = 'relay_stream';
+
+            if ($relayMode === 'exclusive') {
+                $sourcesList = ['live', 'relay_stream'];
+            } elseif ($relayMode === 'scheduled' && $startHour !== '' && $endHour !== '') {
+                $sParts = explode(':', $startHour);
+                $eParts = explode(':', $endHour);
+                $sH = (int) ($sParts[0] ?? 0);
+                $sM = (int) ($sParts[1] ?? 0);
+                $eH = (int) ($eParts[0] ?? 0);
+                $eM = (int) ($eParts[1] ?? 0);
+
+                $liq .= "# Retransmision programada por horario ({$sH}h{$sM}m0s-{$eH}h{$eM}m0s)\n";
+                $liq .= "relay_scheduled = switch([({ {$sH}h{$sM}m0s-{$eH}h{$eM}m0s }, relay_stream)])\n\n";
+                $sourcesList[] = 'relay_scheduled';
+            } else {
+                // fulltime (respaldo)
+                $sourcesList[] = 'relay_stream';
+            }
         }
 
         $fallbackSources = '[' . implode(', ', $sourcesList) . ']';
