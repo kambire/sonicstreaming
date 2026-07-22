@@ -98,13 +98,24 @@ final class ServerController extends Controller
             return null;
         }
         return [
-            'name'             => $name,
-            'hostname'         => $request->str('hostname', '127.0.0.1'),
-            'driver'           => $driver,
-            'port_range_start' => $start,
-            'port_range_end'   => $end,
-            'max_streams'      => max(1, $request->int('max_streams', 50)),
-            'status'           => $request->str('status', 'active') === 'inactive' ? 'inactive' : 'active',
+            'name'                   => $name,
+            'hostname'               => $request->str('hostname', 'sonic.geeks.com.py'),
+            'public_ip'              => $request->str('public_ip', '186.182.28.19'),
+            'ssl_port'               => max(1, $request->int('ssl_port', 7000)),
+            'ssh_port'               => max(1, $request->int('ssh_port', 40002)),
+            'ssh_user'               => $request->str('ssh_user', 'user'),
+            'driver'                 => $driver,
+            'port_range_start'       => $start,
+            'port_range_end'         => $end,
+            'harbor_port_offset'     => max(0, $request->int('harbor_port_offset', 10000)),
+            'telnet_port_offset'     => max(0, $request->int('telnet_port_offset', 20000)),
+            'max_streams'            => max(1, $request->int('max_streams', 200)),
+            'default_max_listeners'  => max(1, $request->int('default_max_listeners', 500)),
+            'default_max_bitrate'    => max(32, $request->int('default_max_bitrate', 192)),
+            'default_max_tracks'     => max(10, $request->int('default_max_tracks', 500)),
+            'status'                 => $request->str('status', 'active') === 'inactive' ? 'inactive' : 'active',
+            'datacenter_location'    => $request->str('datacenter_location', 'Asunción, Paraguay'),
+            'notes'                  => $request->str('notes', ''),
         ];
     }
 }
