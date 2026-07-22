@@ -64,8 +64,12 @@ final class AutoDjService
         $generalWeights = [];
         $scheduledSources = [];
 
+        $jingleSources = [];
+        $commercialSources = [];
+        $topOfHourSources = [];
+
         foreach ($playlists as $pl) {
-            if ((int) $pl['is_active'] !== 1 || $pl['type'] === 'jingle') {
+            if ((int) $pl['is_active'] !== 1) {
                 continue;
             }
             $items = Playlist::items((int) $pl['id']);
@@ -83,7 +87,18 @@ final class AutoDjService
             $var = 'pl_' . (int) $pl['id'];
             $sources[] = "{$var} = playlist(mode=\"{$mode}\", reload_mode=\"watch\", \"{$m3u}\")";
 
-            if ($pl['type'] === 'scheduled' && !empty($pl['start_time']) && !empty($pl['end_time'])) {
+            $plType = (string) $pl['type'];
+            if ($plType === 'jingle') {
+                $everyX = max(1, (int) ($pl['play_every_x'] ?? 3));
+                $jingleSources[] = ['var' => $var, 'every' => $everyX];
+            } elseif ($plType === 'commercial') {
+                $everyX = max(1, (int) ($pl['play_every_x'] ?? 5));
+                $commercialSources[] = ['var' => $var, 'every' => $everyX];
+            } elseif ($plType === 'top_of_hour') {
+                $min = (int) ($pl['cron_minute'] ?? 0);
+                $interrupt = ((int) ($pl['interrupt_immediately'] ?? 0) === 1);
+                $topOfHourSources[] = ['var' => $var, 'min' => $min, 'interrupt' => $interrupt];
+            } elseif ($plType === 'scheduled' && !empty($pl['start_time']) && !empty($pl['end_time'])) {
                 $startH = str_replace(':', 'h', substr((string) $pl['start_time'], 0, 5));
                 $endH   = str_replace(':', 'h', substr((string) $pl['end_time'], 0, 5));
                 $scheduledSources[] = "({ {$startH}-{$endH} }, {$var})";
@@ -103,7 +118,7 @@ final class AutoDjService
             if ($generalWeights) {
                 if (count($generalWeights) === 1) {
                     $only = array_values($generalWeights)[0];
-                    $liq .= "autodj_gen = {$only['var']}\n";
+                    $liq .= "autodj_music = {$only['var']}\n";
                 } else {
                     $vars = [];
                     $ws = [];
@@ -111,25 +126,66 @@ final class AutoDjService
                         $vars[] = $w['var'];
                         $ws[]   = (string) $w['weight'];
                     }
-                    $liq .= "autodj_gen = random(weights=[" . implode(', ', $ws) . "], [" . implode(', ', $vars) . "])\n";
+                    $liq .= "autodj_music = random(weights=[" . implode(', ', $ws) . "], [" . implode(', ', $vars) . "])\n";
                 }
             } else {
-                $liq .= "autodj_gen = playlist(mode=\"randomize\", reload_mode=\"watch\", \"{$mediaDir}\")\n";
+                $liq .= "autodj_music = playlist(mode=\"randomize\", reload_mode=\"watch\", \"{$mediaDir}\")\n";
             }
 
             if ($scheduledSources) {
-                $scheduledSources[] = "({ true }, autodj_gen)";
+                $scheduledSources[] = "({ true }, autodj_music)";
                 $schedLines = implode(", ", $scheduledSources);
-                $liq .= "autodj = switch([{$schedLines}])\n";
+                $liq .= "autodj_gen = switch([{$schedLines}])\n";
             } else {
-                $liq .= "autodj = autodj_gen\n";
+                $liq .= "autodj_gen = autodj_music\n";
             }
         } else {
             // Sin playlists: reproducir todo el directorio de medios.
-            $liq .= "autodj = playlist(mode=\"randomize\", reload_mode=\"watch\", \"{$mediaDir}\")\n";
+            $liq .= "autodj_gen = playlist(mode=\"randomize\", reload_mode=\"watch\", \"{$mediaDir}\")\n";
         }
 
-        $liq .= "autodj = mksafe(autodj)\n\n";
+        $streamPipeline = 'autodj_gen';
+
+        // Intercalar viñetas / separadores por N canciones
+        if ($jingleSources) {
+            foreach ($jingleSources as $j) {
+                $varJ = $j['var'];
+                $everyX = $j['every'];
+                $streamPipeline = "rotate(weights=[1, {$everyX}], [{$varJ}, {$streamPipeline}])";
+            }
+        }
+
+        // Intercalar publicidad rotativa por N canciones
+        if ($commercialSources) {
+            foreach ($commercialSources as $c) {
+                $varC = $c['var'];
+                $everyX = $c['every'];
+                $streamPipeline = "rotate(weights=[1, {$everyX}], [{$varC}, {$streamPipeline}])";
+            }
+        }
+
+        // Disparar pautas a Hora Exacta / En Punto
+        if ($topOfHourSources) {
+            $switchCases = [];
+            foreach ($topOfHourSources as $t) {
+                $min = $t['min'];
+                $varT = $t['var'];
+                $switchCases[] = "({ {$min}m0s }, {$varT})";
+            }
+            $switchCases[] = "({ true }, {$streamPipeline})";
+            $casesStr = implode(', ', $switchCases);
+            $hasInterrupt = false;
+            foreach ($topOfHourSources as $t) {
+                if ($t['interrupt']) {
+                    $hasInterrupt = true;
+                    break;
+                }
+            }
+            $trackSens = $hasInterrupt ? 'false' : 'true';
+            $streamPipeline = "switch(track_sensitive={$trackSens}, [{$casesStr}])";
+        }
+
+        $liq .= "autodj = {$streamPipeline}\n";
 
         // Transición suave entre AutoDJ y DJ en vivo
         $liq .= "# Funciones de transicion suave entre AutoDJ y DJ en vivo\n";

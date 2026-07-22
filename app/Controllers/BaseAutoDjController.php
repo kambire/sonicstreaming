@@ -296,22 +296,26 @@ abstract class BaseAutoDjController extends Controller
             set_flash('danger', 'El nombre de la playlist es obligatorio.');
             $this->back($sid);
         }
-        $type = $request->str('type', 'general') === 'scheduled' ? 'scheduled' : 'general';
+        $validTypes = ['general', 'scheduled', 'jingle', 'commercial', 'top_of_hour'];
+        $type = in_array($request->str('type'), $validTypes, true) ? $request->str('type') : 'general';
         $startTime = $request->str('start_time');
         $endTime   = $request->str('end_time');
 
         Playlist::create([
-            'station_id' => $sid,
-            'name'       => $name,
-            'type'       => $type,
-            'shuffle'    => $request->input('shuffle') ? 1 : 0,
-            'is_active'  => 1,
-            'weight'     => max(1, $request->int('weight', 1)),
-            'start_time' => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
-            'end_time'   => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
+            'station_id'            => $sid,
+            'name'                  => $name,
+            'type'                  => $type,
+            'shuffle'               => $request->input('shuffle') ? 1 : 0,
+            'is_active'             => 1,
+            'weight'                => max(1, $request->int('weight', 1)),
+            'play_every_x'          => max(1, $request->int('play_every_x', 3)),
+            'interrupt_immediately' => $request->input('interrupt_immediately') ? 1 : 0,
+            'cron_minute'           => max(0, min(59, $request->int('cron_minute', 0))),
+            'start_time'            => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
+            'end_time'              => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
         ]);
         $this->autodj->reloadIfRunning($station);
-        set_flash('success', 'Playlist creada.');
+        set_flash('success', 'Playlist creada correctamente.');
         $this->back($sid);
     }
 
@@ -322,17 +326,21 @@ abstract class BaseAutoDjController extends Controller
         $pl = Playlist::find((int) $pid);
         if ($pl && (int) $pl['station_id'] === $sid) {
             $name = $request->str('name', $pl['name']);
-            $type = $request->str('type', $pl['type']) === 'scheduled' ? 'scheduled' : 'general';
+            $validTypes = ['general', 'scheduled', 'jingle', 'commercial', 'top_of_hour'];
+            $type = in_array($request->str('type'), $validTypes, true) ? $request->str('type') : (string) $pl['type'];
             $startTime = $request->str('start_time', $pl['start_time'] ?? '');
             $endTime   = $request->str('end_time', $pl['end_time'] ?? '');
 
             Playlist::update((int) $pid, [
-                'name'       => $name,
-                'type'       => $type,
-                'shuffle'    => $request->input('shuffle') ? 1 : 0,
-                'weight'     => max(1, $request->int('weight', (int) $pl['weight'])),
-                'start_time' => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
-                'end_time'   => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
+                'name'                  => $name,
+                'type'                  => $type,
+                'shuffle'               => $request->input('shuffle') ? 1 : 0,
+                'weight'                => max(1, $request->int('weight', (int) $pl['weight'])),
+                'play_every_x'          => max(1, $request->int('play_every_x', (int) ($pl['play_every_x'] ?? 3))),
+                'interrupt_immediately' => $request->input('interrupt_immediately') ? 1 : 0,
+                'cron_minute'           => max(0, min(59, $request->int('cron_minute', (int) ($pl['cron_minute'] ?? 0)))),
+                'start_time'            => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
+                'end_time'              => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
             ]);
             $this->autodj->reloadIfRunning($station);
             set_flash('success', 'Playlist actualizada.');

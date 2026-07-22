@@ -5,11 +5,19 @@ $autodjUrl = url($base . '/stations/' . $sid . '/autodj');
 $quotaBytes = $quotaMb * 1024 * 1024;
 $pct = $quotaBytes > 0 ? min(100, round($usageBytes / $quotaBytes * 100)) : 0;
 $running = ($station['autodj_status'] ?? 'stopped') === 'running';
+$tab = $_GET['tab'] ?? 'music';
+
+// Filtrar playlists por pestaña
+$musicPlaylists = array_filter($playlists, fn($p) => in_array($p['type'] ?? 'general', ['general', 'scheduled']));
+$jinglePlaylists = array_filter($playlists, fn($p) => ($p['type'] ?? '') === 'jingle');
+$commercialPlaylists = array_filter($playlists, fn($p) => ($p['type'] ?? '') === 'commercial');
+$exactTimePlaylists = array_filter($playlists, fn($p) => ($p['type'] ?? '') === 'top_of_hour');
 ?>
+
 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
     <div>
         <a href="<?= url($base . '/stations/' . $sid) ?>" class="text-decoration-none small text-muted"><i class="bi bi-arrow-left"></i> Volver a la estación</a>
-        <h5 class="mb-0 mt-1"><i class="bi bi-music-note-list text-info"></i> Gestión de AutoDJ y Programación · <?= e($station['name']) ?>
+        <h5 class="mb-0 mt-1"><i class="bi bi-music-note-list text-info"></i> Gestión de AutoDJ y Automatización · <?= e($station['name']) ?>
             <?= $running ? '<span class="badge bg-success"><i class="bi bi-broadcast"></i> Transmitiendo al aire</span>' : '<span class="badge bg-secondary">Detenido</span>' ?>
         </h5>
     </div>
@@ -25,6 +33,37 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
     </div>
 </div>
 
+<!-- MENÚ SUPERIOR DE SECCIONES DE AUTOMATIZACIÓN -->
+<ul class="nav nav-pills nav-fill bg-dark bg-opacity-75 p-2 rounded mb-4 border border-secondary shadow-sm">
+    <li class="nav-item">
+        <a class="nav-link <?= ($tab === 'music') ? 'active bg-primary fw-bold text-white shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=music">
+            <i class="bi bi-music-note-beamer"></i> 1. Música & Playlists Generales
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= ($tab === 'jingles') ? 'active bg-info text-dark fw-bold shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=jingles">
+            <i class="bi bi-mic-fill"></i> 2. Viñetas & Separadores
+            <?php if (count($jinglePlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($jinglePlaylists) ?></span><?php endif; ?>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= ($tab === 'commercials') ? 'active bg-warning text-dark fw-bold shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=commercials">
+            <i class="bi bi-badge-ad-fill"></i> 3. Publicidad Rotativa
+            <?php if (count($commercialPlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($commercialPlaylists) ?></span><?php endif; ?>
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link <?= ($tab === 'exact_time') ? 'active bg-danger fw-bold text-white shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=exact_time">
+            <i class="bi bi-clock-history"></i> 4. Hora Exacta / En Punto
+            <?php if (count($exactTimePlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($exactTimePlaylists) ?></span><?php endif; ?>
+        </a>
+    </li>
+</ul>
+
+<?php if ($tab === 'music'): ?>
+<!-- ===================================================================== -->
+<!-- TAB 1: MÚSICA GENERAL Y PROGRAMACIÓN POR HORARIOS                    -->
+<!-- ===================================================================== -->
 <div class="row g-3">
     <!-- Biblioteca de música -->
     <div class="col-lg-7">
@@ -60,9 +99,6 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                         </div>
                     </div>
                     <button class="btn btn-primary btn-sm w-100"><i class="bi bi-upload"></i> Subir música</button>
-                    <div class="form-text mt-2 small">
-                        <i class="bi bi-info-circle"></i> Puedes seleccionar <strong>múltiples archivos</strong> a la vez (Ctrl o Shift).
-                    </div>
                 </form>
 
                 <!-- Acciones masivas -->
@@ -75,7 +111,7 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                         </div>
                         <div class="d-flex align-items-center gap-1">
                             <select name="playlist_id" id="bulkPlaylistSelect" class="form-select form-select-sm" style="max-width:180px;">
-                                <option value="">— Asignar a playlist —</option>
+                                <option value="">— Asignar a lista —</option>
                                 <?php foreach ($playlists as $pl): ?>
                                     <option value="<?= (int) $pl['id'] ?>"><?= e($pl['name']) ?></option>
                                 <?php endforeach; ?>
@@ -103,9 +139,7 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                             <?php endif; ?>
                             <?php foreach ($tracks as $t): ?>
                                 <tr>
-                                    <td>
-                                        <input class="form-check-input track-checkbox" type="checkbox" name="track_ids[]" value="<?= (int) $t['id'] ?>">
-                                    </td>
+                                    <td><input class="form-check-input track-checkbox" type="checkbox" name="track_ids[]" value="<?= (int) $t['id'] ?>"></td>
                                     <td class="text-truncate" style="max-width:200px" title="<?= e($t['original_name']) ?>">
                                         <i class="bi bi-music-note text-info"></i> <?= e($t['title'] ?: $t['original_name']) ?>
                                     </td>
@@ -124,11 +158,10 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
         </div>
     </div>
 
-    <!-- Playlists y Programacion por Horario -->
+    <!-- Playlists y Programación por Horarios -->
     <div class="col-lg-5">
-        <!-- Crear Playlist -->
         <div class="card mb-3">
-            <div class="card-header"><i class="bi bi-folder-plus"></i> Crear Nueva Playlist o Programa</div>
+            <div class="card-header"><i class="bi bi-folder-plus"></i> Crear Nueva Playlist / Programa</div>
             <div class="card-body">
                 <form method="post" action="<?= $autodjUrl ?>/playlists">
                     <?= \App\Core\Csrf::field() ?>
@@ -145,7 +178,7 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small mb-1">Prioridad / Peso</label>
-                            <input type="number" name="weight" class="form-control form-control-sm" value="1" min="1" title="Prioridad en la rotacion general">
+                            <input type="number" name="weight" class="form-control form-control-sm" value="1" min="1">
                         </div>
                     </div>
                     <div class="row g-2 mb-2" id="createTimeFields" style="display:none;">
@@ -167,196 +200,345 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
             </div>
         </div>
 
-        <h6 class="mb-2 text-muted fw-bold"><i class="bi bi-collection-play"></i> Listas de Música y Programas</h6>
-
-        <?php foreach ($playlists as $pl): 
-            $pid = (int) $pl['id'];
-            $items = \App\Models\Playlist::items($pid);
-            $countItems = count($items);
-            $isActive = (int) $pl['is_active'] === 1;
-            $isScheduled = ($pl['type'] ?? 'general') === 'scheduled';
-        ?>
-            <div class="card mb-3 border-<?= $isActive ? ($isScheduled ? 'warning' : 'success') : 'secondary' ?>">
-                <div class="card-header d-flex justify-content-between align-items-center bg-body-tertiary py-2">
-                    <div>
-                        <strong><i class="bi bi-collection-play-fill text-<?= $isActive ? ($isScheduled ? 'warning' : 'success') : 'muted' ?>"></i> <?= e($pl['name']) ?></strong>
-                        <?php if ($isActive): ?>
-                            <?php if ($isScheduled): ?>
-                                <span class="badge bg-warning text-dark"><i class="bi bi-clock-history"></i> Programada (<?= e(substr($pl['start_time'] ?? '00:00', 0, 5)) ?> - <?= e(substr($pl['end_time'] ?? '23:59', 0, 5)) ?>)</span>
-                            <?php else: ?>
-                                <span class="badge bg-success"><i class="bi bi-broadcast"></i> AL AIRE</span>
-                            <?php endif; ?>
-                        <?php else: ?>
-                            <span class="badge bg-secondary">INACTIVA</span>
-                        <?php endif; ?>
-                    </div>
-                    <div class="d-flex align-items-center gap-1">
-                        <!-- Toggle Activar/Desactivar -->
-                        <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/toggle" class="d-inline">
-                            <?= \App\Core\Csrf::field() ?>
-                            <button class="btn btn-sm btn-<?= $isActive ? 'outline-warning' : 'outline-success' ?> py-0" title="<?= $isActive ? 'Desactivar playlist' : 'Activar playlist' ?>">
-                                <?= $isActive ? '<i class="bi bi-pause-fill"></i> Pause' : '<i class="bi bi-check-lg"></i> Activar' ?>
-                            </button>
-                        </form>
-                        <!-- Eliminar Playlist -->
-                        <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/delete" class="d-inline" onsubmit="return confirm('¿Eliminar la playlist <?= e($pl['name']) ?>?')">
-                            <?= \App\Core\Csrf::field() ?>
-                            <button class="btn btn-sm btn-outline-danger py-0" title="Eliminar playlist"><i class="bi bi-trash"></i></button>
-                        </form>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <!-- Boton de acceso a la playlist dedicada -->
-                    <div class="d-grid gap-2 mb-2">
-                        <a href="<?= $autodjUrl ?>/playlists/<?= $pid ?>" class="btn btn-primary btn-sm fw-bold shadow-sm">
-                            <i class="bi bi-list-stars"></i> Ver y Gestionar Lista (<?= $countItems ?> temas)
-                        </a>
-                    </div>
-
-                    <div class="row g-2 mb-2">
-                        <div class="col-8">
-                            <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/play">
-                                <?= \App\Core\Csrf::field() ?>
-                                <button class="btn btn-sm btn-success w-100 shadow-sm"><i class="bi bi-play-circle-fill"></i> Enviar al Aire Ahora</button>
-                            </form>
-                        </div>
-                        <div class="col-4">
-                            <button type="button" class="btn btn-sm btn-outline-secondary w-100" onclick="toggleEditBox(<?= $pid ?>)"><i class="bi bi-pencil"></i> Horarios</button>
-                        </div>
-                    </div>
-
-                    <!-- Panel de Edicion de Horarios (Oculto por defecto) -->
-                    <div id="editBox_<?= $pid ?>" class="p-2 border rounded bg-dark-subtle mb-2" style="display:none;">
-                        <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/update">
-                            <?= \App\Core\Csrf::field() ?>
-                            <div class="mb-2">
-                                <label class="form-label small mb-1">Nombre</label>
-                                <input type="text" name="name" class="form-control form-control-sm" value="<?= e($pl['name']) ?>" required>
-                            </div>
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
-                                    <label class="form-label small mb-1">Tipo</label>
-                                    <select name="type" class="form-select form-select-sm" onchange="toggleScheduleFields(this, 'editTimeFields_<?= $pid ?>')">
-                                        <option value="general" <?= !$isScheduled ? 'selected' : '' ?>>Rotación General</option>
-                                        <option value="scheduled" <?= $isScheduled ? 'selected' : '' ?>>Programada por Horario</option>
-                                    </select>
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small mb-1">Prioridad / Peso</label>
-                                    <input type="number" name="weight" class="form-control form-control-sm" value="<?= (int) $pl['weight'] ?>" min="1">
-                                </div>
-                            </div>
-                            <div class="row g-2 mb-2" id="editTimeFields_<?= $pid ?>" style="<?= $isScheduled ? '' : 'display:none;' ?>">
-                                <div class="col-6">
-                                    <label class="form-label small mb-1">Hora Inicio</label>
-                                    <input type="time" name="start_time" class="form-control form-control-sm" value="<?= e(substr($pl['start_time'] ?? '14:00', 0, 5)) ?>">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small mb-1">Hora Fin</label>
-                                    <input type="time" name="end_time" class="form-control form-control-sm" value="<?= e(substr($pl['end_time'] ?? '18:00', 0, 5)) ?>">
-                                </div>
-                            </div>
-                            <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" name="shuffle" value="1" <?= (int) $pl['shuffle'] === 1 ? 'checked' : '' ?>>
-                                <label class="form-check-label small">Orden aleatorio (Shuffle)</label>
-                            </div>
-                            <button class="btn btn-sm btn-primary w-100"><i class="bi bi-check-lg"></i> Guardar Cambios</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        <?php endforeach; ?>
+        <h6 class="mb-2 text-muted fw-bold"><i class="bi bi-collection-play"></i> Listas de Música Activas</h6>
+        <?php renderPlaylistCards($musicPlaylists, $autodjUrl); ?>
     </div>
 </div>
 
-<!-- Form oculto para eliminar 1 pista individual -->
-<form id="singleDeleteForm" method="post" action="" style="display:none;">
-    <?= \App\Core\Csrf::field() ?>
-</form>
+<?php elseif ($tab === 'jingles'): ?>
+<!-- ===================================================================== -->
+<!-- TAB 2: VIÑETAS Y SEPARADORES POR X CANCIONES                          -->
+<!-- ===================================================================== -->
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card border-info shadow-sm">
+            <div class="card-header bg-info-subtle text-info-emphasis fw-bold">
+                <i class="bi bi-mic-fill text-info"></i> Crear Nueva Lista de Viñetas / Separadores
+            </div>
+            <div class="card-body">
+                <form method="post" action="<?= $autodjUrl ?>/playlists">
+                    <?= \App\Core\Csrf::field() ?>
+                    <input type="hidden" name="type" value="jingle">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre de la lista de viñetas</label>
+                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Ej: Viñetas Estación FM, IDs Institucionales" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-info"><i class="bi bi-arrow-repeat"></i> Frecuencia de emisión</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Reproducir 1 viñeta cada</span>
+                            <input type="number" name="play_every_x" class="form-control" value="3" min="1" max="50" required>
+                            <span class="input-group-text">canciones</span>
+                        </div>
+                        <div class="form-text small">Ejemplo: Con valor 3, sonarán 3 canciones de música y luego 1 viñeta de esta lista.</div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="shuffle" id="shJingle" value="1" checked>
+                        <label class="form-check-label small" for="shJingle">Orden aleatorio entre viñetas</label>
+                    </div>
+                    <button class="btn btn-info btn-sm w-100 fw-bold text-dark"><i class="bi bi-plus-circle"></i> Crear Lista de Viñetas</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-collection-play-fill text-info"></i> Listas de Viñetas y Separadores Configuradas</span>
+                <span class="badge bg-info text-dark"><?= count($jinglePlaylists) ?> activas</span>
+            </div>
+            <div class="card-body">
+                <?php if (!$jinglePlaylists): ?>
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-mic fs-1 text-secondary d-block mb-2"></i>
+                        Aún no has creado ninguna lista de viñetas o separadores.<br>
+                        Usa el formulario de la izquierda para configurar tu primera viñeta cada X canciones.
+                    </div>
+                <?php endif; ?>
+                <?php renderPlaylistCards($jinglePlaylists, $autodjUrl); ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($tab === 'commercials'): ?>
+<!-- ===================================================================== -->
+<!-- TAB 3: PUBLICIDAD ROTATIVA / COMERCIALES                               -->
+<!-- ===================================================================== -->
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card border-warning shadow-sm">
+            <div class="card-header bg-warning-subtle text-warning-emphasis fw-bold">
+                <i class="bi bi-badge-ad-fill text-warning"></i> Crear Lista de Publicidad Rotativa
+            </div>
+            <div class="card-body">
+                <form method="post" action="<?= $autodjUrl ?>/playlists">
+                    <?= \App\Core\Csrf::field() ?>
+                    <input type="hidden" name="type" value="commercial">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del paquete de publicidad</label>
+                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Ej: Pauta Auspiciantes Julio, Spots Comerciales" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-warning"><i class="bi bi-arrow-repeat"></i> Frecuencia de emisión</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Intercalar 1 publicidad cada</span>
+                            <input type="number" name="play_every_x" class="form-control" value="5" min="1" max="100" required>
+                            <span class="input-group-text">canciones</span>
+                        </div>
+                        <div class="form-text small">Ejemplo: Con valor 5, sonarán 5 canciones musicales y luego 1 pauta comercial de esta lista.</div>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="shuffle" id="shComm" value="1" checked>
+                        <label class="form-check-label small" for="shComm">Orden aleatorio entre comerciales</label>
+                    </div>
+                    <button class="btn btn-warning btn-sm w-100 fw-bold text-dark"><i class="bi bi-plus-circle"></i> Crear Lista de Publicidad</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-collection-play-fill text-warning"></i> Paquetes de Publicidad Rotativa</span>
+                <span class="badge bg-warning text-dark"><?= count($commercialPlaylists) ?> configuradas</span>
+            </div>
+            <div class="card-body">
+                <?php if (!$commercialPlaylists): ?>
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-megaphone fs-1 text-secondary d-block mb-2"></i>
+                        No hay pautas de publicidad rotativa creadas.<br>
+                        Usa el formulario para programar comerciales intercalados en la música.
+                    </div>
+                <?php endif; ?>
+                <?php renderPlaylistCards($commercialPlaylists, $autodjUrl); ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($tab === 'exact_time'): ?>
+<!-- ===================================================================== -->
+<!-- TAB 4: HORA EXACTA / EN PUNTO (INTERRUPCIÓN INMEDIATA)                 -->
+<!-- ===================================================================== -->
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card border-danger shadow-sm">
+            <div class="card-header bg-danger-subtle text-danger-emphasis fw-bold">
+                <i class="bi bi-clock-history text-danger"></i> Programar Anuncio a Hora Exacta / En Punto
+            </div>
+            <div class="card-body">
+                <form method="post" action="<?= $autodjUrl ?>/playlists">
+                    <?= \App\Core\Csrf::field() ?>
+                    <input type="hidden" name="type" value="top_of_hour">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nombre del anuncio o pauta exacta</label>
+                        <input type="text" name="name" class="form-control form-control-sm" placeholder="Ej: Hora Hablada En Punto (00m), Cadena de Noticias" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-danger"><i class="bi bi-alarm-fill"></i> Minuto de disparo exacto</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text">Disparar al minuto</span>
+                            <select name="cron_minute" class="form-select">
+                                <option value="0">00 (Cada hora en punto XX:00)</option>
+                                <option value="15">15 (A los 15 minutos XX:15)</option>
+                                <option value="30">30 (A la media hora XX:30)</option>
+                                <option value="45">45 (A los 45 minutos XX:45)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="p-2 border rounded border-danger bg-danger-subtle mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="interrupt_immediately" id="intImm" value="1" checked>
+                            <label class="form-check-label fw-bold text-danger small" for="intImm">
+                                <i class="bi bi-lightning-fill"></i> Interrupción inmediata (Corta la música sonando)
+                            </label>
+                        </div>
+                        <div class="form-text small text-white-50 mt-1">
+                            Si está marcado, atenúa y silenciará de inmediato cualquier tema musical al llegar al minuto exacto. Si no está marcado, esperará a que termine el tema actual.
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-sm w-100 fw-bold"><i class="bi bi-plus-circle"></i> Programar Hora Exacta</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card shadow-sm">
+            <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-collection-play-fill text-danger"></i> Anuncios y Pautas a Hora Exacta</span>
+                <span class="badge bg-danger"><?= count($exactTimePlaylists) ?> configurados</span>
+            </div>
+            <div class="card-body">
+                <?php if (!$exactTimePlaylists): ?>
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-clock fs-1 text-secondary d-block mb-2"></i>
+                        Aún no tienes pautas a la hora exacta o en punto.<br>
+                        Usa el formulario para programar la hora hablada o spots que cortan la música a las XX:00 en punto.
+                    </div>
+                <?php endif; ?>
+                <?php renderPlaylistCards($exactTimePlaylists, $autodjUrl); ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php endif; ?>
+
+<!-- MODALES DE EDICIÓN Y AYUDANTES -->
+<?php
+/** Helper para renderizar tarjetas de playlists */
+function renderPlaylistCards(array $playlistList, string $autodjUrl): void {
+    foreach ($playlistList as $pl):
+        $pid = (int) $pl['id'];
+        $items = \App\Models\Playlist::items($pid);
+        $countItems = count($items);
+        $isActive = (int) $pl['is_active'] === 1;
+        $type = $pl['type'] ?? 'general';
+    ?>
+        <div class="card mb-3 border-secondary">
+            <div class="card-header d-flex justify-content-between align-items-center bg-body-tertiary py-2">
+                <div>
+                    <strong><i class="bi bi-collection-play-fill text-info"></i> <?= e($pl['name']) ?></strong>
+                    <?php if ($type === 'jingle'): ?>
+                        <span class="badge bg-info text-dark">Viñeta (1 cada <?= (int)($pl['play_every_x'] ?? 3) ?> temas)</span>
+                    <?php elseif ($type === 'commercial'): ?>
+                        <span class="badge bg-warning text-dark">Publicidad (1 cada <?= (int)($pl['play_every_x'] ?? 5) ?> temas)</span>
+                    <?php elseif ($type === 'top_of_hour'): ?>
+                        <span class="badge bg-danger">Hora Exacta (Minuto <?= (int)($pl['cron_minute'] ?? 0) ?>m0s)</span>
+                        <?php if (!empty($pl['interrupt_immediately'])): ?><span class="badge bg-dark border">Corte Inmediato</span><?php endif; ?>
+                    <?php elseif ($type === 'scheduled'): ?>
+                        <span class="badge bg-warning text-dark">Programada (<?= e(substr($pl['start_time'] ?? '00:00', 0, 5)) ?> - <?= e(substr($pl['end_time'] ?? '23:59', 0, 5)) ?>)</span>
+                    <?php else: ?>
+                        <span class="badge bg-success">Rotación General</span>
+                    <?php endif; ?>
+                </div>
+                <div class="d-flex align-items-center gap-1">
+                    <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/toggle" class="d-inline">
+                        <?= \App\Core\Csrf::field() ?>
+                        <button class="btn btn-sm btn-<?= $isActive ? 'outline-warning' : 'outline-success' ?> py-0">
+                            <?= $isActive ? 'Pausar' : 'Activar' ?>
+                        </button>
+                    </form>
+                    <a href="<?= $autodjUrl ?>/playlists/<?= $pid ?>" class="btn btn-sm btn-info py-0">
+                        <i class="bi bi-music-note"></i> Ver archivos (<?= $countItems ?>)
+                    </a>
+                    <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#editModal<?= $pid ?>">
+                        <i class="bi bi-gear"></i>
+                    </button>
+                    <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/delete" class="d-inline" onsubmit="return confirm('¿Eliminar esta playlist?')">
+                        <?= \App\Core\Csrf::field() ?>
+                        <button class="btn btn-sm btn-outline-danger py-0"><i class="bi bi-trash"></i></button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body p-2 small text-muted">
+                Pistas cargadas: <strong><?= $countItems ?></strong> audio(s) · Orden: <strong><?= (int) $pl['shuffle'] === 1 ? 'Aleatorio (Shuffle)' : 'Secuencial' ?></strong>
+            </div>
+        </div>
+
+        <!-- Modal Editar Playlist -->
+        <div class="modal fade" id="editModal<?= $pid ?>" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/update">
+                        <?= \App\Core\Csrf::field() ?>
+                        <div class="modal-header">
+                            <h5 class="modal-title">Editar Lista: <?= e($pl['name']) ?></h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nombre</label>
+                                <input type="text" name="name" class="form-control" value="<?= e($pl['name']) ?>" required>
+                            </div>
+                            <?php if ($type === 'jingle' || $type === 'commercial'): ?>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Frecuencia (1 pista cada X temas)</label>
+                                    <input type="number" name="play_every_x" class="form-control" value="<?= (int)($pl['play_every_x'] ?? 3) ?>" min="1">
+                                </div>
+                            <?php elseif ($type === 'top_of_hour'): ?>
+                                <div class="mb-3">
+                                    <label class="form-label small fw-bold">Minuto de disparo exacto (0-59)</label>
+                                    <input type="number" name="cron_minute" class="form-control" value="<?= (int)($pl['cron_minute'] ?? 0) ?>" min="0" max="59">
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" name="interrupt_immediately" id="intImm<?= $pid ?>" value="1" <?= !empty($pl['interrupt_immediately']) ? 'checked' : '' ?>>
+                                    <label class="form-check-label small fw-bold text-danger" for="intImm<?= $pid ?>">Interrupción inmediata de música al instante</label>
+                                </div>
+                            <?php endif; ?>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="shuffle" id="sh<?= $pid ?>" value="1" <?= (int)$pl['shuffle'] === 1 ? 'checked' : '' ?>>
+                                <label class="form-check-label small" for="sh<?= $pid ?>">Reproducción aleatoria (Shuffle)</label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary btn-sm">Guardar Cambios</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    <?php endforeach;
+}
+?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.track-checkbox');
-
     if (selectAll) {
         selectAll.addEventListener('change', function () {
-            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            document.querySelectorAll('.track-checkbox').forEach(cb => cb.checked = this.checked);
         });
     }
 });
 
-function toggleScheduleFields(selectEl, fieldsId) {
-    const fields = document.getElementById(fieldsId);
-    if (fields) {
-        fields.style.display = selectEl.value === 'scheduled' ? 'flex' : 'none';
+function toggleScheduleFields(select, targetId) {
+    const target = document.getElementById(targetId);
+    if (target) {
+        target.style.display = (select.value === 'scheduled') ? 'flex' : 'none';
     }
 }
 
-function toggleEditBox(pid) {
-    const box = document.getElementById('editBox_' + pid);
-    if (box) {
-        box.style.display = box.style.display === 'none' ? 'block' : 'none';
-    }
-}
-
-function submitBulk(actionUrl) {
-    const sel = document.getElementById('bulkPlaylistSelect');
-    if (!sel.value) {
-        alert('Por favor selecciona una playlist de la lista desplegable.');
-        event.preventDefault();
-        return;
-    }
-    const checked = document.querySelectorAll('.track-checkbox:checked');
-    if (checked.length === 0) {
-        alert('Por favor marca al menos una canción de la biblioteca.');
-        event.preventDefault();
-        return;
-    }
+function submitBulk(url) {
     const form = document.getElementById('bulkForm');
-    form.action = actionUrl;
+    const plSelect = document.getElementById('bulkPlaylistSelect');
+    if (!plSelect.value) {
+        alert('Por favor selecciona una playlist destino.');
+        return;
+    }
+    form.action = url;
 }
 
-function submitBulkAll(actionUrl) {
-    const sel = document.getElementById('bulkPlaylistSelect');
-    if (!sel.value) {
-        alert('Por favor selecciona una playlist a la que deseas asignar TODAS las canciones.');
-        event.preventDefault();
-        return;
-    }
-    if (!confirm('¿Agregar TODAS las canciones de la biblioteca a esta playlist?')) {
-        event.preventDefault();
-        return;
-    }
+function submitBulkAll(url) {
     const form = document.getElementById('bulkForm');
-    form.action = actionUrl;
-    
-    let input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'add_all';
-    input.value = '1';
-    form.appendChild(input);
+    const plSelect = document.getElementById('bulkPlaylistSelect');
+    if (!plSelect.value) {
+        alert('Por favor selecciona una playlist destino.');
+        return;
+    }
+    document.querySelectorAll('.track-checkbox').forEach(cb => cb.checked = true);
+    form.action = url;
 }
 
-function submitBulkDelete(actionUrl) {
-    const checked = document.querySelectorAll('.track-checkbox:checked');
-    if (checked.length === 0) {
-        alert('Por favor marca las canciones que deseas eliminar.');
-        event.preventDefault();
-        return;
-    }
-    if (!confirm('¿Eliminar las ' + checked.length + ' canciones seleccionadas de la biblioteca?')) {
-        event.preventDefault();
-        return;
-    }
+function submitBulkDelete(url) {
+    if (!confirm('¿Estás seguro de eliminar las canciones seleccionadas?')) return;
     const form = document.getElementById('bulkForm');
-    form.action = actionUrl;
+    form.action = url;
 }
 
 function deleteSingleTrack(tid) {
-    if (!confirm('¿Eliminar esta canción?')) return;
-    const form = document.getElementById('singleDeleteForm');
+    if (!confirm('¿Eliminar esta canción permanentemente?')) return;
+    const form = document.createElement('form');
+    form.method = 'post';
     form.action = '<?= $autodjUrl ?>/tracks/' + tid + '/delete';
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrf_token';
+    csrf.value = '<?= \App\Core\Csrf::getToken() ?>';
+    form.appendChild(csrf);
+    document.body.appendChild(form);
     form.submit();
 }
 </script>
