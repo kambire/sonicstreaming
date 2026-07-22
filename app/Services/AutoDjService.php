@@ -214,8 +214,8 @@ final class AutoDjService
         $rawRelayUrl = trim((string) ($station['relay_url'] ?? ''));
         $relayUrl = $this->resolveRelayUrl($rawRelayUrl);
         if ($relayUrl !== '') {
-            $liq .= "# Fuente de retransmision Relay externa (re-transmite streams MP3/AAC/M3U/Icecast/Shoutcast)\n";
-            $liq .= "relay_stream = mksafe(input.http(\"{$relayUrl}\"))\n\n";
+            $liq .= "# Fuente de retransmision Relay externa con decodificador universal FFmpeg (MP3/AAC/HE-AAC/M3U/PLS)\n";
+            $liq .= "relay_stream = mksafe(input.ffmpeg(\"{$relayUrl}\"))\n\n";
             $fallbackSources = "[live, mksafe(autodj_mic), relay_stream]";
         } else {
             $fallbackSources = "[live, mksafe(autodj_mic)]";
