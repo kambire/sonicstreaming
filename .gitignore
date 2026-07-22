@@ -1,0 +1,22 @@
+# Dependencias
+/vendor/
+
+# Configuracion y secretos
+/.env
+.env.bak.*
+
+# Contenido generado en tiempo de ejecucion
+/storage/configs/*
+/storage/pids/*
+/storage/logs/*
+/storage/media/*
+/storage/backups/*
+!/storage/configs/.gitkeep
+!/storage/pids/.gitkeep
+!/storage/logs/.gitkeep
+!/storage/media/.gitkeep
+!/storage/backups/.gitkeep
+
+# Sistema
+Thumbs.db
+.DS_Store

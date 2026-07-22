@@ -1,0 +1,22 @@
+# /etc/systemd/system/liquidsoap@.service
+# AutoDJ (Liquidsoap): una instancia por estacion. %i = id de la estacion.
+# Arranca despues del Shoutcast de la misma estacion.
+#
+#   sudo systemctl start  liquidsoap@12
+#   sudo systemctl stop   liquidsoap@12
+
+[Unit]
+Description=Liquidsoap AutoDJ - estacion %i
+After=network.target shoutcast@%i.service
+Wants=shoutcast@%i.service
+
+[Service]
+Type=simple
+User=sonic
+Group=sonic
+ExecStart=/usr/bin/liquidsoap /var/www/sonicstreaming/storage/configs/station_%i.liq
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

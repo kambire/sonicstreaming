@@ -1,0 +1,17 @@
+# Redirige la raiz del proyecto hacia /public (docroot real de la app).
+# En produccion (Linux) apunta el DocumentRoot directamente a la carpeta public/.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteCond %{REQUEST_URI} !^/sonicstreaming/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Defensa en profundidad: negar acceso directo a archivos sensibles
+# (por si mod_rewrite estuviera deshabilitado).
+<FilesMatch "(^\.env|\.(env|conf|liq|log|sql|md|lock|json|tpl)$)">
+    Require all denied
+</FilesMatch>
+
+# Nunca listar directorios
+Options -Indexes

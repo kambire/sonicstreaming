@@ -1,0 +1,12 @@
+<IfModule mod_rewrite.c>
+    Options -MultiViews -Indexes
+    RewriteEngine On
+
+    # Servir archivos y carpetas existentes tal cual (assets, etc.)
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Todo lo demas al front controller (portable: funciona en subcarpeta o en raiz)
+    RewriteRule ^ index.php [L]
+</IfModule>

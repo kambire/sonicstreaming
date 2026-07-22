@@ -1,0 +1,27 @@
+# /etc/nginx/sites-available/sonicstreaming
+# DocumentRoot apunta a la carpeta public/ (nunca a la raiz del proyecto).
+
+server {
+    listen 80;
+    server_name panel.tudominio.com;
+
+    root /var/www/sonicstreaming/public;
+    index index.php;
+
+    # Enrutado al front controller
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+
+    # Bloquear archivos sensibles y ocultos
+    location ~ /\.(?!well-known).* { deny all; }
+    location ~* \.(env|conf|liq|sql|log|tpl)$ { deny all; }
+
+    # Subida de audio para el AutoDJ (ajusta segun tus planes)
+    client_max_body_size 200M;
+}

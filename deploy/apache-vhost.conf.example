@@ -1,0 +1,24 @@
+# /etc/apache2/sites-available/sonicstreaming.conf
+# Requiere: a2enmod rewrite
+
+<VirtualHost *:80>
+    ServerName panel.tudominio.com
+    DocumentRoot /var/www/sonicstreaming/public
+
+    <Directory /var/www/sonicstreaming/public>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    # Nunca servir el resto del proyecto
+    <Directory /var/www/sonicstreaming>
+        Require all denied
+    </Directory>
+    <Directory /var/www/sonicstreaming/public>
+        Require all granted
+    </Directory>
+
+    ErrorLog  ${APACHE_LOG_DIR}/sonicstreaming_error.log
+    CustomLog ${APACHE_LOG_DIR}/sonicstreaming_access.log combined
+</VirtualHost>

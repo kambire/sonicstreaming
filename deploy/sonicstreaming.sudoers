@@ -1,0 +1,6 @@
+# Copiar a /etc/sudoers.d/sonicstreaming  (chmod 440)
+# Permite al usuario del servidor web controlar las instancias sin contrasena.
+# Cambia "www-data" por el usuario de tu PHP-FPM/Apache si es distinto.
+
+www-data ALL=(root) NOPASSWD: /bin/systemctl start shoutcast@*, /bin/systemctl stop shoutcast@*, /bin/systemctl restart shoutcast@*
+www-data ALL=(root) NOPASSWD: /bin/systemctl start liquidsoap@*, /bin/systemctl stop liquidsoap@*, /bin/systemctl restart liquidsoap@*

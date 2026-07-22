@@ -1,0 +1,8 @@
+# Cron del panel SonicStreaming (produccion Linux).
+# Editar con:  crontab -e   (o colocar en /etc/cron.d/sonicstreaming)
+
+# Poller de estadisticas: cada minuto
+* * * * * php /var/www/sonicstreaming/cron/poll_stats.php >> /var/www/sonicstreaming/storage/logs/poll.log 2>&1
+
+# Facturacion: cada dia a las 03:00 (marca vencidas y suspende)
+0 3 * * * php /var/www/sonicstreaming/cron/billing_run.php >> /var/www/sonicstreaming/storage/logs/billing.log 2>&1

@@ -1,0 +1,23 @@
+; /etc/systemd/system/shoutcast@.service
+; Unidad plantilla: una instancia por estacion. %i = id de la estacion.
+;
+;   sudo systemctl start  shoutcast@12
+;   sudo systemctl stop   shoutcast@12
+;
+; Ajusta rutas y usuario a tu servidor.
+
+[Unit]
+Description=Shoutcast DNAS - estacion %i
+After=network.target
+
+[Service]
+Type=simple
+User=sonic
+Group=sonic
+WorkingDirectory=/opt/shoutcast
+ExecStart=/opt/shoutcast/sc_serv /var/www/sonicstreaming/storage/configs/station_%i.conf
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
