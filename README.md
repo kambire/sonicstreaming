@@ -175,15 +175,24 @@ Para **desactivarlo**: reinstala con `sudo AUTO_DEPLOY=0 bash install.sh` o borr
 > cd /var/www/sonicstreaming && sudo -u www-data git remote set-url origin git@github.com:kambire/sonicstreaming.git
 > ```
 
-### Manual
+### Manual con detalle de cambios — `update.sh`
 
-Si prefieres controlar cada actualización tú mismo:
+Si prefieres actualizar tú mismo **viendo exactamente qué va a cambiar** antes de aplicarlo:
 
 ```bash
-cd /var/www/sonicstreaming && sudo -u www-data git pull && sudo bash install.sh
+cd /var/www/sonicstreaming && sudo bash update.sh
 ```
 
-Reinstalar es seguro (idempotente): re‑aplica configuración y migraciones sin perder secretos ni datos.
+`update.sh` muestra los **commits nuevos**, los **archivos modificados** y avisa si hay **migraciones** o si cambió `install.sh`; hace un **backup de la base de datos** y pide confirmación. Opciones:
+
+| Opción | Efecto |
+|--------|--------|
+| `--check` | Solo muestra los cambios, no aplica nada. |
+| `-y`, `--yes` | Aplica sin preguntar. |
+| `--no-backup` | Omite el backup previo de la BD. |
+| `-b <rama>` | Actualiza desde otra rama (por defecto `main`). |
+
+Alternativa mínima: `sudo -u www-data git pull && sudo bash install.sh` (reinstalar es idempotente y no pierde secretos ni datos).
 
 ---
 
