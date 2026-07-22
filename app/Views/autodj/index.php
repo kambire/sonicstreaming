@@ -33,32 +33,28 @@ $exactTimePlaylists = array_values(array_filter($playlists, fn($p) => ($p['type'
     </div>
 </div>
 
-<!-- MENÚ SUPERIOR DE AUTOMATIZACIÓN DE AUTO-DJ -->
-<ul class="nav nav-pills nav-fill bg-dark bg-opacity-75 p-2 rounded mb-4 border border-secondary shadow-sm">
-    <li class="nav-item">
-        <a class="nav-link <?= ($tab === 'music') ? 'active bg-primary fw-bold text-white shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=music">
-            <i class="bi bi-music-note-beamer"></i> 1. Música & Playlists Generales
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= ($tab === 'jingles') ? 'active bg-info text-dark fw-bold shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=jingles">
-            <i class="bi bi-mic-fill"></i> 2. Viñetas & Separadores
-            <?php if (count($jinglePlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($jinglePlaylists) ?></span><?php endif; ?>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= ($tab === 'commercials') ? 'active bg-warning text-dark fw-bold shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=commercials">
-            <i class="bi bi-badge-ad-fill"></i> 3. Publicidad Rotativa
-            <?php if (count($commercialPlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($commercialPlaylists) ?></span><?php endif; ?>
-        </a>
-    </li>
-    <li class="nav-item">
-        <a class="nav-link <?= ($tab === 'exact_time') ? 'active bg-danger fw-bold text-white shadow-sm' : 'text-light' ?>" href="<?= $autodjUrl ?>?tab=exact_time">
-            <i class="bi bi-clock-history"></i> 4. Hora Exacta / En Punto
-            <?php if (count($exactTimePlaylists)): ?><span class="badge bg-dark text-light ms-1"><?= count($exactTimePlaylists) ?></span><?php endif; ?>
-        </a>
-    </li>
-</ul>
+<!-- MENÚ DE AUTOMATIZACIÓN (DISPONIBLE EN EL MENÚ LATERAL IZQUIERDO Y COMPACTO) -->
+<div class="d-flex align-items-center justify-content-between bg-dark bg-opacity-50 p-2 rounded mb-4 border border-secondary border-opacity-25 shadow-sm">
+    <div class="d-flex align-items-center gap-2">
+        <span class="text-muted small ms-2"><i class="bi bi-layout-sidebar-inset text-info"></i> Sección AutoDJ:</span>
+        <?php if ($tab === 'music'): ?>
+            <span class="badge bg-primary px-3 py-2"><i class="bi bi-music-note-beamer"></i> 1. Música & Playlists Generales</span>
+        <?php elseif ($tab === 'jingles'): ?>
+            <span class="badge bg-info text-dark px-3 py-2"><i class="bi bi-mic-fill"></i> 2. Viñetas & Separadores (Cada X temas)</span>
+        <?php elseif ($tab === 'commercials'): ?>
+            <span class="badge bg-warning text-dark px-3 py-2"><i class="bi bi-badge-ad-fill"></i> 3. Publicidad Rotativa (Cada X temas)</span>
+        <?php elseif ($tab === 'exact_time'): ?>
+            <span class="badge bg-danger px-3 py-2"><i class="bi bi-clock-history"></i> 4. Hora Exacta / En Punto</span>
+        <?php endif; ?>
+    </div>
+
+    <div class="btn-group btn-group-sm me-1">
+        <a href="<?= $autodjUrl ?>?tab=music" class="btn btn-outline-secondary text-light <?= ($tab === 'music') ? 'active' : '' ?>" title="Música & Generales"><i class="bi bi-music-note"></i> Música</a>
+        <a href="<?= $autodjUrl ?>?tab=jingles" class="btn btn-outline-secondary text-light <?= ($tab === 'jingles') ? 'active' : '' ?>" title="Viñetas"><i class="bi bi-mic"></i> Viñetas (<?= count($jinglePlaylists) ?>)</a>
+        <a href="<?= $autodjUrl ?>?tab=commercials" class="btn btn-outline-secondary text-light <?= ($tab === 'commercials') ? 'active' : '' ?>" title="Publicidad"><i class="bi bi-badge-ad"></i> Publicidad (<?= count($commercialPlaylists) ?>)</a>
+        <a href="<?= $autodjUrl ?>?tab=exact_time" class="btn btn-outline-secondary text-light <?= ($tab === 'exact_time') ? 'active' : '' ?>" title="Hora Exacta"><i class="bi bi-clock"></i> Hora Exacta (<?= count($exactTimePlaylists) ?>)</a>
+    </div>
+</div>
 
 <?php if ($tab === 'music'): ?>
 <!-- ===================================================================== -->
