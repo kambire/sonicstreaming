@@ -215,14 +215,28 @@ $autodjRunning = ($station['autodj_status'] ?? 'stopped') === 'running';
                             <i class="bi bi-file-earmark-music"></i> Listas de Reproducción (.M3U / .PLS)
                         </label>
                         <div class="d-flex gap-2">
-                            <a href="<?= e($streamUrlSsl) ?>.m3u" class="btn btn-sm btn-outline-secondary flex-fill text-light" target="_blank">
-                                <i class="bi bi-download text-info"></i> Descargar .M3U
+                            <a href="<?= url('listen/station_' . $station['id'] . '/m3u') ?>" class="btn btn-sm btn-outline-info flex-fill fw-bold" target="_blank">
+                                <i class="bi bi-download"></i> Descargar .M3U
                             </a>
-                            <a href="<?= e($streamUrlSsl) ?>.pls" class="btn btn-sm btn-outline-secondary flex-fill text-light" target="_blank">
-                                <i class="bi bi-download text-info"></i> Descargar .PLS
+                            <a href="<?= url('listen/station_' . $station['id'] . '/pls') ?>" class="btn btn-sm btn-outline-info flex-fill fw-bold" target="_blank">
+                                <i class="bi bi-download"></i> Descargar .PLS
                             </a>
                         </div>
                     </div>
+
+                    <?php if (!empty($station['relay_url'])): ?>
+                    <div class="col-12 mt-3 border-top border-secondary border-opacity-25 pt-2">
+                        <label class="form-label small fw-bold text-success mb-1">
+                            <i class="bi bi-arrow-repeat"></i> URL de Re-transmisión Relay (Fuente Externa Configurada)
+                        </label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" class="form-control font-monospace text-success fw-bold bg-dark text-white border-secondary" readonly value="<?= e($station['relay_url']) ?>" id="relayUrlInput">
+                            <button class="btn btn-outline-success" onclick="copyInput('relayUrlInput', this)" title="Copiar Relay URL">
+                                <i class="bi bi-clipboard"></i> Copiar
+                            </button>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
 

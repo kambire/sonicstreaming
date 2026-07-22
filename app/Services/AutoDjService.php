@@ -211,9 +211,18 @@ final class AutoDjService
         $liq .= "  add(weights=[1.0, 1.0], [fade.initial(duration=3.0, b), fade.final(duration=3.0, a)])\n";
         $liq .= "end\n\n";
 
+        $relayUrl = trim((string) ($station['relay_url'] ?? ''));
+        if ($relayUrl !== '') {
+            $liq .= "# Fuente de retransmision Relay externa (re-transmite streams MP3/AAC/M3U/Icecast/Shoutcast)\n";
+            $liq .= "relay_stream = mksafe(input.http(\"{$relayUrl}\"))\n\n";
+            $fallbackSources = "[live, mksafe(autodj_mic), relay_stream]";
+        } else {
+            $fallbackSources = "[live, mksafe(autodj_mic)]";
+        }
+
         // Entrada de DJ en vivo (harbor)
         $liq .= "live = input.harbor(\"/stream\", port={$djPort}, password=\"{$sourcePass}\")\n";
-        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, mksafe(autodj_mic)])\n\n";
+        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], {$fallbackSources})\n\n";
 
         // Salida hacia Shoutcast (sc_serv) como fuente
         $liq .= "output.shoutcast(\n";

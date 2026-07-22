@@ -19,11 +19,16 @@ return function (Router $router): void {
     $reseller = new RoleMiddleware('admin', 'reseller');
     $client = new RoleMiddleware('client');
 
-    // ---- Publicas / auth ----
+    // ---- Publicas / auth / streams ----
     $router->get('/', 'HomeController@index');
     $router->get('/login', 'AuthController@showLogin');
     $router->post('/login', 'AuthController@login', [$csrf]);
     $router->post('/logout', 'AuthController@logout', [$csrf, $auth]);
+
+    // Enlaces de reproduccion directa y descargas M3U / PLS
+    $router->get('/listen/station_{id}', 'StreamController@listen');
+    $router->get('/listen/station_{id}/m3u', 'StreamController@m3u');
+    $router->get('/listen/station_{id}/pls', 'StreamController@pls');
 
     // ---------------------------------------------------------------
     // ADMIN
