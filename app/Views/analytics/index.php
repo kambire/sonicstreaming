@@ -228,12 +228,24 @@ $apiUrl = url($base . '/stations/' . $sid . '/analytics/api');
 document.addEventListener('DOMContentLoaded', function () {
     const apiUrl = '<?= $apiUrl ?>?days=<?= $days ?>';
 
-    // Inicializar Mapa Leaflet con modo oscuro CartoDB Dark
-    const map = L.map('analyticsMap').setView([-25.2637, -57.5759], 3);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // Inicializar Mapa Leaflet con modo oscuro y fallback a OpenStreetMap
+    const map = L.map('analyticsMap', { scrollWheelZoom: false }).setView([-25.2637, -57.5759], 3);
+    const darkTiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 18
-    }).addTo(map);
+    });
+
+    darkTiles.addTo(map);
+
+    // Si CartoDB falla por bloqueo de red, usar OpenStreetMap estándar
+    darkTiles.on('tileerror', function () {
+        if (!window._mapFallbackLoaded) {
+            window._mapFallbackLoaded = true;
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+        }
+    });
+
+    setTimeout(function () { map.invalidateSize(); }, 300);
 
     let historyChart;
     let deviceChart;

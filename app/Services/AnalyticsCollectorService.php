@@ -47,7 +47,12 @@ final class AnalyticsCollectorService
             $activeIps[] = $ip;
             $ua = (string) ($client['user_agent'] ?? '');
             $connectedTimeSec = (int) ($client['connect_time'] ?? 0);
+            $bitrate = (int) ($station['max_bitrate'] ?? 128);
+            $bytesPerSec = ($bitrate * 1000) / 8;
             $bytesSent = (int) ($client['bytes_sent'] ?? 0);
+            if ($bytesSent <= 0 && $connectedTimeSec > 0) {
+                $bytesSent = (int) round($connectedTimeSec * $bytesPerSec);
+            }
 
             // Buscar si ya existe una sesión activa para esta IP y estación
             $stmt = \App\Core\Model::db()->prepare(
@@ -63,6 +68,9 @@ final class AnalyticsCollectorService
                 $sessId = (int) $existing['id'];
                 $connAt = strtotime((string) $existing['connected_at']);
                 $duration = max($connectedTimeSec, time() - $connAt);
+                if ($bytesSent <= 0) {
+                    $bytesSent = (int) round($duration * $bytesPerSec);
+                }
 
                 $upd = \App\Core\Model::db()->prepare(
                     'UPDATE listener_sessions 
