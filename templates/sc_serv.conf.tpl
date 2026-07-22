@@ -30,3 +30,9 @@ streamgenre_1={{GENRE}}
 ; Log
 logfile={{LOG_FILE}}
 screenlog=0
+
+; Optimizacion de Latencia Ultra-Baja (~5 Segundos de Retraso)
+burstonconnect=1
+burstsize=16384
+autodumpusers=1
+autodumpspan=30

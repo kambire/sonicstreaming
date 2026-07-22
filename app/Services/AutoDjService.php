@@ -118,6 +118,10 @@ final class AutoDjService
         $liq .= "settings.server.telnet.port.set({$telnetPort})\n";
         $liq .= "settings.server.telnet.bind_addr.set(\"127.0.0.1\")\n\n";
 
+        // Latencia ultra-baja (~3 a 5 segundos de buffer maximo)
+        $liq .= "settings.root.max_latency.set(3.0)\n";
+        $liq .= "settings.output.frame.size.set(0.04)\n\n";
+
         if ($sources) {
             $liq .= implode("\n", $sources) . "\n\n";
 
@@ -191,8 +195,8 @@ final class AutoDjService
             $streamPipeline = "switch(track_sensitive={$trackSens}, [{$casesStr}])";
         }
 
-        // Solapamiento / Crossfade suave de 3 segundos entre canciones (Enganche)
-        $liq .= "autodj = crossfade(duration=3.0, fade_in=3.0, fade_out=3.0, {$streamPipeline})\n\n";
+        // Enganche rapido y suave de 1.5s entre canciones al saltar o cambiar de tema
+        $liq .= "autodj = crossfade(duration=1.5, fade_in=1.0, fade_out=1.0, {$streamPipeline})\n\n";
 
         // Cola dinamica para microfono del navegador "Hablar en Vivo" con atenuacion de musica (auto-ducking)
         $liq .= "# Cola de microfono en vivo desvaneciendo volumen de musica\n";
