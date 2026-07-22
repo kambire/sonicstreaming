@@ -258,6 +258,34 @@ abstract class BaseAutoDjController extends Controller
         $this->back($sid);
     }
 
+    public function start(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $res = $this->autodj->start($station);
+        if (!empty($res['ok'])) {
+            ActivityLog::record('autodj_start', 'Station #' . $sid);
+            set_flash('success', 'AutoDJ iniciado correctamente al aire.');
+        } else {
+            set_flash('danger', 'Error al iniciar AutoDJ: ' . ($res['message'] ?? 'Error desconocido'));
+        }
+        $this->back($sid);
+    }
+
+    public function stop(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $res = $this->autodj->stop($station);
+        if (!empty($res['ok'])) {
+            ActivityLog::record('autodj_stop', 'Station #' . $sid);
+            set_flash('success', 'AutoDJ detenido correctamente.');
+        } else {
+            set_flash('danger', 'Error al detener AutoDJ: ' . ($res['message'] ?? 'Error desconocido'));
+        }
+        $this->back($sid);
+    }
+
     public function showPlaylist(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;
