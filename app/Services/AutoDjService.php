@@ -127,6 +127,19 @@ final class AutoDjService
     }
 
     /** @param array<string,mixed> $station */
+    public function reloadIfRunning(array $station): void
+    {
+        $sid = (int) $station['id'];
+        $this->generateScript($station);
+        if (($station['autodj_status'] ?? '') === 'running') {
+            $driver = (string) ($station['driver'] ?? env('SHOUTCAST_DRIVER', 'mock'));
+            if ($driver === 'linux') {
+                $this->systemctl('restart', $sid);
+            }
+        }
+    }
+
+    /** @param array<string,mixed> $station */
     public function start(array $station): array
     {
         $sid = (int) $station['id'];

@@ -56,6 +56,19 @@ abstract class BaseAutoDjController extends Controller
         $sid = (int) $id;
         $station = $this->guard($sid);
 
+        $playlists = Playlist::forStation($sid);
+        if (!$playlists) {
+            Playlist::create([
+                'station_id' => $sid,
+                'name'       => 'General',
+                'type'       => 'general',
+                'shuffle'    => 1,
+                'is_active'  => 1,
+                'weight'     => 1,
+            ]);
+            $playlists = Playlist::forStation($sid);
+        }
+
         $quotaMb = 0;
         if (!empty($station['plan_id'])) {
             $plan = Plan::find((int) $station['plan_id']);
@@ -67,7 +80,7 @@ abstract class BaseAutoDjController extends Controller
             'station'   => $station,
             'base'      => $this->base,
             'tracks'    => MediaTrack::forStation($sid),
-            'playlists' => Playlist::forStation($sid),
+            'playlists' => $playlists,
             'usageBytes'=> MediaTrack::diskUsage($sid),
             'quotaMb'   => $quotaMb,
         ]);
@@ -116,6 +129,8 @@ abstract class BaseAutoDjController extends Controller
             $quotaBytes = (int) ($plan['disk_quota_mb'] ?? 0) * 1024 * 1024;
         }
 
+        $targetPlId = $request->int('playlist_id', 0);
+
         foreach ($files as $file) {
             $errCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
             if ($errCode !== UPLOAD_ERR_OK) {
@@ -160,7 +175,7 @@ abstract class BaseAutoDjController extends Controller
                 [$artist, $title] = array_map('trim', explode(' - ', $title, 2));
             }
 
-            MediaTrack::create([
+            $trackId = MediaTrack::create([
                 'station_id'    => $sid,
                 'filename'      => $filename,
                 'original_name' => mb_substr($original, 0, 255),
@@ -170,9 +185,19 @@ abstract class BaseAutoDjController extends Controller
                 'filesize'      => $size,
             ]);
 
+            if ($targetPlId > 0) {
+                PlaylistItem::create([
+                    'playlist_id' => $targetPlId,
+                    'track_id'    => (int) $trackId,
+                    'position'    => PlaylistItem::nextPosition($targetPlId),
+                ]);
+            }
+
             ActivityLog::record('autodj_upload', 'Station #' . $sid . ' ' . $filename);
             $success++;
         }
+
+        $this->autodj->reloadIfRunning($station);
 
         if ($success > 0) {
             $msg = $success === 1 ? 'Pista subida correctamente.' : "Se subieron {$success} pistas correctamente.";
@@ -192,12 +217,13 @@ abstract class BaseAutoDjController extends Controller
     public function deleteTrack(Request $request, string $id, string $tid): void
     {
         $sid = (int) $id;
-        $this->guard($sid);
+        $station = $this->guard($sid);
         $track = MediaTrack::find((int) $tid);
         if ($track && (int) $track['station_id'] === $sid) {
             @unlink($this->autodj->mediaDir($sid) . '/' . $track['filename']);
             MediaTrack::delete((int) $tid);
             ActivityLog::record('autodj_track_delete', 'Track #' . $tid);
+            $this->autodj->reloadIfRunning($station);
             set_flash('success', 'Pista eliminada.');
         }
         $this->back($sid);
@@ -206,7 +232,7 @@ abstract class BaseAutoDjController extends Controller
     public function createPlaylist(Request $request, string $id): void
     {
         $sid = (int) $id;
-        $this->guard($sid);
+        $station = $this->guard($sid);
         $name = $request->str('name');
         if ($name === '') {
             set_flash('danger', 'El nombre de la playlist es obligatorio.');
@@ -220,6 +246,7 @@ abstract class BaseAutoDjController extends Controller
             'is_active'  => 1,
             'weight'     => max(1, $request->int('weight', 1)),
         ]);
+        $this->autodj->reloadIfRunning($station);
         set_flash('success', 'Playlist creada.');
         $this->back($sid);
     }
@@ -227,10 +254,11 @@ abstract class BaseAutoDjController extends Controller
     public function deletePlaylist(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;
-        $this->guard($sid);
+        $station = $this->guard($sid);
         $pl = Playlist::find((int) $pid);
         if ($pl && (int) $pl['station_id'] === $sid) {
             Playlist::delete((int) $pid);
+            $this->autodj->reloadIfRunning($station);
             set_flash('success', 'Playlist eliminada.');
         }
         $this->back($sid);
@@ -239,7 +267,7 @@ abstract class BaseAutoDjController extends Controller
     public function addTrack(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;
-        $this->guard($sid);
+        $station = $this->guard($sid);
         $pl = Playlist::find((int) $pid);
         $trackId = $request->int('track_id', 0);
         $track = MediaTrack::find($trackId);
@@ -249,6 +277,7 @@ abstract class BaseAutoDjController extends Controller
                 'track_id'    => $trackId,
                 'position'    => PlaylistItem::nextPosition((int) $pid),
             ]);
+            $this->autodj->reloadIfRunning($station);
             set_flash('success', 'Pista agregada a la playlist.');
         }
         $this->back($sid);
@@ -257,33 +286,124 @@ abstract class BaseAutoDjController extends Controller
     public function removeItem(Request $request, string $id, string $pid, string $itemId): void
     {
         $sid = (int) $id;
-        $this->guard($sid);
+        $station = $this->guard($sid);
         $item = PlaylistItem::find((int) $itemId);
         $pl = Playlist::find((int) $pid);
         if ($item && $pl && (int) $pl['station_id'] === $sid && (int) $item['playlist_id'] === (int) $pid) {
             PlaylistItem::delete((int) $itemId);
+            $this->autodj->reloadIfRunning($station);
             set_flash('success', 'Pista quitada de la playlist.');
         }
         $this->back($sid);
     }
 
-    public function start(Request $request, string $id): void
+    public function togglePlaylist(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;
         $station = $this->guard($sid);
-        $result = $this->autodj->start($station);
-        ActivityLog::record('autodj_start', 'Station #' . $sid);
-        set_flash($result['ok'] ? 'success' : 'danger', $result['message']);
+        $pl = Playlist::find((int) $pid);
+        if ($pl && (int) $pl['station_id'] === $sid) {
+            $newActive = (int) $pl['is_active'] === 1 ? 0 : 1;
+            Playlist::update((int) $pid, ['is_active' => $newActive]);
+            $this->autodj->reloadIfRunning($station);
+            set_flash('success', $newActive ? 'Playlist activada.' : 'Playlist desactivada.');
+        }
         $this->back($sid);
     }
 
-    public function stop(Request $request, string $id): void
+    public function playPlaylist(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;
         $station = $this->guard($sid);
-        $result = $this->autodj->stop($station);
-        ActivityLog::record('autodj_stop', 'Station #' . $sid);
-        set_flash($result['ok'] ? 'success' : 'danger', $result['message']);
+        $pl = Playlist::find((int) $pid);
+        if ($pl && (int) $pl['station_id'] === $sid) {
+            Playlist::update((int) $pid, ['is_active' => 1]);
+            $res = $this->autodj->start($station);
+            set_flash($res['ok'] ? 'success' : 'danger', "Playlist \"{$pl['name']}\" enviada al aire. " . $res['message']);
+        }
+        $this->back($sid);
+    }
+
+    public function clearPlaylist(Request $request, string $id, string $pid): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $pl = Playlist::find((int) $pid);
+        if ($pl && (int) $pl['station_id'] === $sid) {
+            $pdo = \App\Core\Model::db();
+            $stmt = $pdo->prepare('DELETE FROM playlist_items WHERE playlist_id = ?');
+            $stmt->execute([(int) $pid]);
+            $this->autodj->reloadIfRunning($station);
+            set_flash('success', 'Playlist vaciada.');
+        }
+        $this->back($sid);
+    }
+
+    public function bulkAddTracks(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $pid = $request->int('playlist_id', 0);
+        $pl = Playlist::find($pid);
+        if (!$pl || (int) $pl['station_id'] !== $sid) {
+            set_flash('danger', 'Selecciona una playlist valida.');
+            $this->back($sid);
+        }
+
+        $addAll = $request->input('add_all') ? true : false;
+        $trackIds = array_map('intval', (array) $request->input('track_ids', []));
+
+        if ($addAll) {
+            $allTracks = MediaTrack::forStation($sid);
+            $trackIds = array_column($allTracks, 'id');
+        }
+
+        if (empty($trackIds)) {
+            set_flash('warning', 'No se selecciono ninguna cancion.');
+            $this->back($sid);
+        }
+
+        $added = 0;
+        foreach ($trackIds as $tid) {
+            $t = MediaTrack::find($tid);
+            if ($t && (int) $t['station_id'] === $sid) {
+                PlaylistItem::create([
+                    'playlist_id' => $pid,
+                    'track_id'    => $tid,
+                    'position'    => PlaylistItem::nextPosition($pid),
+                ]);
+                $added++;
+            }
+        }
+
+        $this->autodj->reloadIfRunning($station);
+        set_flash('success', "Se agregaron {$added} canciones a la playlist \"{$pl['name']}\".");
+        $this->back($sid);
+    }
+
+    public function bulkDeleteTracks(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $trackIds = array_map('intval', (array) $request->input('track_ids', []));
+
+        if (empty($trackIds)) {
+            set_flash('warning', 'No se selecciono ninguna cancion para eliminar.');
+            $this->back($sid);
+        }
+
+        $deleted = 0;
+        foreach ($trackIds as $tid) {
+            $track = MediaTrack::find($tid);
+            if ($track && (int) $track['station_id'] === $sid) {
+                @unlink($this->autodj->mediaDir($sid) . '/' . $track['filename']);
+                MediaTrack::delete($tid);
+                $deleted++;
+            }
+        }
+
+        $this->autodj->reloadIfRunning($station);
+        set_flash('success', "Se eliminaron {$deleted} canciones.");
         $this->back($sid);
     }
 }
