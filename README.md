@@ -277,4 +277,167 @@ templates/     # sc_serv.conf.tpl
 storage/       # configs (.conf/.liq), media, pids, logs, backups
 deploy/        # systemd, sudoers, cron, nginx/apache de ejemplo
 install.sh     # instalador para Ubuntu Server
+deploy.sh      # auto-deploy (lo llama el cron)
+update.sh      # actualizador manual con menu interactivo
 ```
+
+---
+---
+
+# 🛠️ Guía de desarrollo (referencia técnica)
+
+> **Esta sección es la referencia para continuar el desarrollo en futuras sesiones/conversaciones.**
+> Resume la arquitectura interna, convenciones y "recetas" para extender el panel sin tener que releer todo el código.
+
+## Filosofía y stack
+
+- **PHP 8 vanilla con MVC ligero propio, sin framework.** El objetivo es que se despliegue en cualquier hosting con PHP + MySQL sin dependencias.
+- **Sin Composer obligatorio:** autoloader PSR‑4 propio y lector de `.env` propio (`app/Core/Env.php`). `composer.json` existe solo para autoload opcional.
+- **UI:** Bootstrap 5 + Bootstrap Icons + Chart.js (por CDN). Tema oscuro en `public/assets/css/app.css`.
+- **Base de datos:** PDO + MariaDB/MySQL, siempre con sentencias preparadas.
+
+## Flujo de una petición
+
+```
+public/index.php  (inicia sesión + bootstrap)
+  └─ bootstrap.php  (autoloader App\ → app/, carga .env, helpers)
+      └─ config/routes.php  (Router)
+          └─ middlewares (Auth / Role / Csrf)
+              └─ App\Controllers\...@metodo
+                  ├─ Models (PDO)  /  Services
+                  └─ View::render(vista, datos, layout) → HTML
+```
+
+`base_url()` se calcula desde `SCRIPT_NAME`, por eso funciona igual en subcarpeta (XAMPP `/sonicstreaming/public`) que en la raíz (producción con docroot en `public/`).
+
+## Núcleo — `app/Core/`
+
+| Clase | Responsabilidad / métodos clave |
+|-------|--------------------------------|
+| `Env` | `Env::load($path)`, `Env::get($k,$def)`. Parser `.env` propio. |
+| `helpers.php` | Funciones globales: `env()`, `e()`, `url()`, `asset()`, `base_url()`, `redirect()`, `auth()`, `flash()/set_flash()`, `old()`, `random_password()`, `money()`, `human_size()`, `status_badge()`, `nav_active()`. |
+| `Database` | `Database::connection()` → PDO singleton (utf8mb4, `ERRMODE_EXCEPTION`, `FETCH_ASSOC`, sin emular prepares). |
+| `Model` | Base tipo ActiveRecord. Cada modelo define `static $table`. Métodos: `all()`, `find()`, `findBy()`, `where()` (trata `null` como `IS NULL`), `create()`→id, `update()`, `delete()`, `count()`. |
+| `Controller` | `view()`, `json()`, `flashOld()`, `clearOld()`. |
+| `Request` | `method()` (soporta `_method`), `path()` (quita el base), `str()`, `int()`, `input()`, `all()`. |
+| `Router` | `get/post/put/delete()`, `group([mw], fn)`. Handler string `'Sub\\Controller@metodo'` (prefijo `App\Controllers\`) o closure. Params `{id}` → regex. |
+| `View` | `render(vista, datos, layout)` y `renderPartial()`. Vistas = PHP plano en `app/Views/`. |
+| `Auth` | `attempt()`, `check()`, `user()` (cacheada), `id()`, `role()`, `hasRole()`, `logout()`. Sesión `auth_user_id`; `session_regenerate_id` al entrar. |
+| `Csrf` | `token()`, `verify()`, `field()` (input oculto). |
+
+**Middlewares** (`app/Middleware/`): `AuthMiddleware` (exige sesión), `RoleMiddleware('admin','reseller',…)` (RBAC), `CsrfMiddleware` (valida token en POST/PUT/DELETE). Se aplican por ruta o por grupo en `config/routes.php`.
+
+## Modelos — `app/Models/`
+
+| Modelo | Tabla | Métodos propios |
+|--------|-------|-----------------|
+| `User` | `users` | `clients()`, `resellers()`, `clientsOfReseller()`, `emailExists()` |
+| `Server` | `servers` | `nextFreePort()` (avanza de 2 en 2), `activeCount()` |
+| `Plan` | `plans` | `global()` |
+| `Station` | `stations` | `allWithOwner()`, `forUser()`, `forReseller()`, `findWithServer()`, `activeWithServer()` |
+| `Invoice` | `invoices` | `allWithUser()`, `forUser()`, `overdueUnpaid()` |
+| `StationStat` | `station_stats` | `latest()`, `history()` |
+| `MediaTrack` | `media_tracks` | `forStation()`, `diskUsage()` |
+| `Playlist` | `playlists` | `forStation()`, `items()` |
+| `PlaylistItem` | `playlist_items` | `nextPosition()` |
+| `ActivityLog` | `activity_log` | `record($action,$details)` |
+
+## Servicios — `app/Services/`
+
+- **`ShoutcastService`** — genera `storage/configs/station_<id>.conf` desde `templates/sc_serv.conf.tpl`; `start/stop/restart()`; `fetchStats()` (lee `/statistics?json=1`; en `mock` inventa datos); elige driver con `driverFor()`.
+- **`AutoDjService`** — genera el `.liq` y los `.m3u` por playlist; `start/stop()` de Liquidsoap (mock/systemd/proc_open); `mediaDir()`, `liqPath()`.
+- **`BillingService`** — `runOverdue()` (marca vencidas + suspende estaciones), `reactivateUser()` (reactiva al pagar).
+- **`Crypto`** — AES‑256‑CBC con clave `sha256(APP_KEY)`. Cifra la contraseña admin de cada estación en BD.
+
+## Control de procesos — `app/Process/`
+
+Interfaz `ProcessController { start, stop, restart, isRunning }` con 3 drivers:
+
+| Driver | Shoutcast | AutoDJ (Liquidsoap) |
+|--------|-----------|---------------------|
+| `MockDriver` | marcador `storage/pids/station_<id>.running` | marcador `.autodj.running` |
+| `WindowsDriver` | `proc_open` `sc_serv.exe` + PID | `proc_open` `liquidsoap.exe` |
+| `LinuxDriver` | `sudo systemctl … shoutcast@<id>` | `sudo systemctl … liquidsoap@<id>` |
+
+Se elige por el campo `servers.driver` (o `SHOUTCAST_DRIVER` del `.env`).
+
+## Controladores y rutas
+
+- Organizados por rol: `App\Controllers\{Admin,Client,Reseller}\…`, más `Auth`, `Home`, `Profile`, `Api\StatsController`.
+- **AutoDJ** comparte lógica en `BaseAutoDjController` (abstracto); cada rol extiende y define `$base` y `authorizeStation()` (scoping de acceso).
+- En `config/routes.php` las rutas se agrupan con `RoleMiddleware`. Handler = `'Sub\\Controller@metodo'`.
+
+## Base de datos y migraciones
+
+- Migraciones en `database/migrations/NNN_nombre.sql` (`001_initial_schema.sql`, `002_autodj.sql`).
+- `cron/migrate.php` crea la BD (tolerante si el usuario no tiene privilegio `CREATE`), aplica **todas** las migraciones en orden y **siembra** admin, servidor local y planes demo. La contraseña del admin se toma de `ADMIN_PASSWORD`/`ADMIN_EMAIL` (env) o cae a `admin123` en dev.
+- Tablas núcleo: `users`, `servers`, `plans`, `stations`, `invoices`, `station_stats`, `settings`, `activity_log`; AutoDJ: `media_tracks`, `playlists`, `playlist_items`, `autodj_schedules`.
+
+## Puertos y streaming
+
+- `stations.port` sale del rango del servidor (`port_range_start..end`, **paso 2** porque Shoutcast usa `port` y `port+1`).
+- `stations.dj_port = port + 10000` → harbor de Liquidsoap para DJ en vivo.
+- El listener escucha en `http://host:port/stream`; el source (software DJ) apunta a `host:port` mount `/stream` con `source_password`.
+
+## Convenciones de código
+
+- `declare(strict_types=1);` en todos los archivos PHP.
+- **Siempre** PDO preparado (usar los helpers de `Model`, o `?` con arrays).
+- En vistas: `e()` para escapar, `Csrf::field()` en cada `<form method="post">`, `<input type="hidden" name="_method" value="PUT|DELETE">` para esos verbos.
+- Mensajes: `set_flash($tipo,$msg)` + partial `flash`; repoblar formularios con `old()` / `flashOld()`.
+- **Texto de UI en español con tildes** en las vistas; en **código, logs y `.sh` evitar tildes/ñ** para no depender de la codificación.
+- Nunca pasar entrada de usuario a shell; operar por ID validado y `escapeshellarg`.
+
+## Recetas rápidas
+
+**Nueva pantalla CRUD:** añadir rutas en `config/routes.php` → crear `App\Controllers\…Controller` (extiende `Controller`) → crear vistas en `app/Views/…` (usan `layouts/app`).
+
+**Nueva migración:** crear `database/migrations/003_xxx.sql` y correr `php cron/migrate.php` (idempotente).
+
+**Nuevo campo en estación:** añadir columna vía nueva migración → incluirlo en el form (`admin/stations/form.php`) y en `StationController::store/update`.
+
+**Nuevo driver de proceso:** implementar `App\Process\ProcessController` y mapearlo en `ShoutcastService::driverFor()` / `AutoDjService`.
+
+## Verificación local (sin Shoutcast, driver `mock`)
+
+```bash
+# Lint de todo el PHP
+for f in $(find app cron config public -name '*.php'); do php -l "$f"; done
+# Crear/actualizar BD + seed
+php cron/migrate.php
+# Poblar estadísticas de prueba
+php cron/poll_stats.php
+```
+
+Prueba de humo por HTTP: `GET /login` para obtener cookie + `csrf_token`, `POST /login`, luego navegar el panel (todas las páginas deben dar 200 sin errores PHP).
+
+## Scripts operativos
+
+| Script | Rol |
+|--------|-----|
+| `install.sh` | Instalación completa en Ubuntu Server (idempotente). |
+| `deploy.sh` | Auto‑deploy: lo ejecuta el cron cada minuto; `git reset --hard` al remoto + migraciones si hay cambios. |
+| `update.sh` | Actualización manual con **menú interactivo** y detalle de cambios. |
+| `cron/migrate.php` | Migraciones + seed. |
+| `cron/poll_stats.php` | Snapshot de oyentes (cada minuto). |
+| `cron/billing_run.php` | Vencimientos + auto‑suspensión (diario). |
+| `cron/boot_restore.php` | Re‑levanta estaciones "en línea" tras reinicio. |
+| `cron/db_backup.sh` | Backup diario de la BD (lo genera `install.sh`). |
+
+## Credenciales de desarrollo
+
+`admin@sonic.local` / `admin123` (solo en el seed de desarrollo; en producción `install.sh` genera una aleatoria).
+
+## Limitaciones conocidas y roadmap
+
+- **Liquidsoap `%mp3`** requiere soporte LAME según la versión/paquete; en algunas builds hay que instalar el plugin de codificación.
+- **Rate‑limit de login** es básico (contador por sesión).
+- `update.sh` aún **no tiene `--rollback`** (volver al commit anterior + restaurar backup) — mejora propuesta.
+- **HTTPS** es autofirmado; para certificado de confianza sin puerto 80, usar Let's Encrypt **DNS‑01** (documentado en *Actualizar → repo privado / HTTPS*).
+- Ideas futuras: soporte **Icecast**, **pasarela de pago**, **reproductor web** embebible por estación, **multi‑servidor** remoto por SSH, **GitHub Actions** para deploy, rama `production` separada de `main`.
+
+## Historial de decisiones (contexto)
+
+- Proyecto tipo **SonicPanel**; alcance elegido: multi‑tenant (admin/reseller/cliente) + planes + facturación + **AutoDJ full**.
+- Desarrollo en **XAMPP/Windows** (driver `mock`), producción en **Ubuntu Server** (driver `linux`) en el **puerto 7000** por HTTPS.
+- Repo: <https://github.com/kambire/sonicstreaming> · auto‑deploy por sondeo activado por defecto.
