@@ -118,7 +118,6 @@ final class AutoDjService
         $liq .= "  host=\"{$host}\", port={$port},\n";
         $liq .= "  password=\"{$sourcePass}\",\n";
         $liq .= "  name=\"{$name}\", genre=\"{$genre}\",\n";
-        $liq .= "  mount=\"/stream\",\n";
         $liq .= "  radio\n";
         $liq .= ")\n";
 
