@@ -119,8 +119,7 @@ final class AutoDjService
         $liq .= "settings.server.telnet.bind_addr.set(\"127.0.0.1\")\n\n";
 
         // Latencia ultra-baja (~3 a 5 segundos de buffer maximo)
-        $liq .= "settings.root.max_latency.set(3.0)\n";
-        $liq .= "settings.output.frame.size.set(0.04)\n\n";
+        $liq .= "settings.root.max_latency.set(3.0)\n\n";
 
         if ($sources) {
             $liq .= implode("\n", $sources) . "\n\n";
