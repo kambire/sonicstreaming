@@ -25,6 +25,7 @@ $running = ($station['status'] ?? '') === 'running';
         <?php if (!empty($owner)): ?><div class="small text-muted">Cliente: <?= e($owner['name']) ?></div><?php endif; ?>
     </div>
     <div class="btn-group">
+        <a href="<?= url($base . '/stations/' . $sid . '/analytics') ?>" class="btn btn-sm btn-outline-info"><i class="bi bi-globe-americas"></i> Analíticas y Mapa</a>
         <?php if ($base === 'admin'): ?>
             <a href="<?= url('admin/stations/' . $sid . '/edit') ?>" class="btn btn-sm btn-outline-light"><i class="bi bi-pencil"></i> Editar</a>
         <?php endif; ?>

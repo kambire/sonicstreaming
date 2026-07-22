@@ -88,6 +88,10 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/autodj/start', 'Admin\\AutoDjController@start', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/stop', 'Admin\\AutoDjController@stop', [$csrf]);
 
+        // Analiticas (admin)
+        $r->get('/admin/stations/{id}/analytics', 'Admin\\AnalyticsController@index');
+        $r->get('/admin/stations/{id}/analytics/api', 'Admin\\AnalyticsController@apiData');
+
         // Facturas (M6)
         $r->get('/admin/invoices', 'Admin\\InvoiceController@index');
         $r->get('/admin/invoices/create', 'Admin\\InvoiceController@create');
@@ -128,6 +132,10 @@ return function (Router $router): void {
         $r->post('/client/stations/{id}/autodj/skip', 'Client\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/client/stations/{id}/autodj/start', 'Client\\AutoDjController@start', [$csrf]);
         $r->post('/client/stations/{id}/autodj/stop', 'Client\\AutoDjController@stop', [$csrf]);
+
+        // Analiticas (cliente)
+        $r->get('/client/stations/{id}/analytics', 'Client\\AnalyticsController@index');
+        $r->get('/client/stations/{id}/analytics/api', 'Client\\AnalyticsController@apiData');
     });
 
     // ---------------------------------------------------------------
@@ -164,6 +172,10 @@ return function (Router $router): void {
         $r->post('/reseller/stations/{id}/autodj/skip', 'Reseller\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/start', 'Reseller\\AutoDjController@start', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/stop', 'Reseller\\AutoDjController@stop', [$csrf]);
+
+        // Analiticas (reseller)
+        $r->get('/reseller/stations/{id}/analytics', 'Reseller\\AnalyticsController@index');
+        $r->get('/reseller/stations/{id}/analytics/api', 'Reseller\\AnalyticsController@apiData');
     });
 
     // ---------------------------------------------------------------
