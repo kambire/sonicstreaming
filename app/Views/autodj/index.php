@@ -172,6 +172,7 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
         <?php foreach ($playlists as $pl): 
             $pid = (int) $pl['id'];
             $items = \App\Models\Playlist::items($pid);
+            $countItems = count($items);
             $isActive = (int) $pl['is_active'] === 1;
             $isScheduled = ($pl['type'] ?? 'general') === 'scheduled';
         ?>
@@ -188,7 +189,6 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                         <?php else: ?>
                             <span class="badge bg-secondary">INACTIVA</span>
                         <?php endif; ?>
-                        <span class="badge bg-dark-subtle text-body border ms-1"><?= count($items) ?> temas</span>
                     </div>
                     <div class="d-flex align-items-center gap-1">
                         <!-- Toggle Activar/Desactivar -->
@@ -206,12 +206,18 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                     </div>
                 </div>
                 <div class="card-body">
-                    <!-- Boton Reproducir al Aire -->
-                    <div class="row g-2 mb-3">
+                    <!-- Boton de acceso a la playlist dedicada -->
+                    <div class="d-grid gap-2 mb-2">
+                        <a href="<?= $autodjUrl ?>/playlists/<?= $pid ?>" class="btn btn-primary btn-sm fw-bold shadow-sm">
+                            <i class="bi bi-list-stars"></i> Ver y Gestionar Lista (<?= $countItems ?> temas)
+                        </a>
+                    </div>
+
+                    <div class="row g-2 mb-2">
                         <div class="col-8">
                             <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/play">
                                 <?= \App\Core\Csrf::field() ?>
-                                <button class="btn btn-sm btn-success w-100 shadow-sm"><i class="bi bi-play-circle-fill"></i> Reproducir / Al Aire Ahora</button>
+                                <button class="btn btn-sm btn-success w-100 shadow-sm"><i class="bi bi-play-circle-fill"></i> Enviar al Aire Ahora</button>
                             </form>
                         </div>
                         <div class="col-4">
@@ -220,7 +226,7 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                     </div>
 
                     <!-- Panel de Edicion de Horarios (Oculto por defecto) -->
-                    <div id="editBox_<?= $pid ?>" class="p-2 border rounded bg-dark-subtle mb-3" style="display:none;">
+                    <div id="editBox_<?= $pid ?>" class="p-2 border rounded bg-dark-subtle mb-2" style="display:none;">
                         <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/update">
                             <?= \App\Core\Csrf::field() ?>
                             <div class="mb-2">
@@ -257,46 +263,6 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                             <button class="btn btn-sm btn-primary w-100"><i class="bi bi-check-lg"></i> Guardar Cambios</button>
                         </form>
                     </div>
-
-                    <!-- Agregar pista individual -->
-                    <?php if ($tracks): ?>
-                    <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/tracks" class="input-group input-group-sm mb-2">
-                        <?= \App\Core\Csrf::field() ?>
-                        <select name="track_id" class="form-select">
-                            <option value="">— Elegir canción —</option>
-                            <?php foreach ($tracks as $t): ?>
-                                <option value="<?= (int) $t['id'] ?>"><?= e($t['title'] ?: $t['original_name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button class="btn btn-outline-info"><i class="bi bi-plus-lg"></i></button>
-                    </form>
-                    <?php endif; ?>
-
-                    <!-- Items de la playlist -->
-                    <?php if (!$items): ?>
-                        <p class="small text-muted mb-0 fst-italic">Playlist vacía. Selecciona canciones a la izquierda y presiona "Agregar a lista".</p>
-                    <?php else: ?>
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="small text-muted fw-bold">Pistas asignadas:</span>
-                            <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/clear" class="d-inline" onsubmit="return confirm('¿Vaciar la playlist <?= e($pl['name']) ?>?')">
-                                <?= \App\Core\Csrf::field() ?>
-                                <button class="btn btn-link text-danger p-0 small text-decoration-none"><i class="bi bi-x-circle"></i> Vaciar lista</button>
-                            </form>
-                        </div>
-                        <ol class="small mb-0 ps-3" style="max-height:200px; overflow-y:auto;">
-                        <?php foreach ($items as $it): ?>
-                            <li class="d-flex justify-content-between align-items-center py-1 border-bottom border-secondary-subtle">
-                                <span class="text-truncate" style="max-width:180px" title="<?= e($it['title'] ?: $it['original_name']) ?>">
-                                    <?= e($it['title'] ?: $it['original_name']) ?>
-                                </span>
-                                <form method="post" action="<?= $autodjUrl ?>/playlists/<?= $pid ?>/items/<?= (int) $it['item_id'] ?>/remove">
-                                    <?= \App\Core\Csrf::field() ?>
-                                    <button class="btn btn-sm btn-link text-danger p-0 ms-1"><i class="bi bi-x-lg"></i></button>
-                                </form>
-                            </li>
-                        <?php endforeach; ?>
-                        </ol>
-                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>

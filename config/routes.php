@@ -70,6 +70,8 @@ return function (Router $router): void {
 
         // AutoDJ (admin)
         $r->get('/admin/stations/{id}/autodj', 'Admin\\AutoDjController@index');
+        $r->get('/admin/stations/{id}/autodj/playlists/{pid}', 'Admin\\AutoDjController@showPlaylist');
+        $r->get('/admin/stations/{id}/autodj/tracks/{tid}/stream', 'Admin\\AutoDjController@streamTrack');
         $r->post('/admin/stations/{id}/autodj/upload', 'Admin\\AutoDjController@upload', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/tracks/{tid}/delete', 'Admin\\AutoDjController@deleteTrack', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/tracks/bulk-delete', 'Admin\\AutoDjController@bulkDeleteTracks', [$csrf]);
@@ -109,6 +111,8 @@ return function (Router $router): void {
 
         // AutoDJ (cliente)
         $r->get('/client/stations/{id}/autodj', 'Client\\AutoDjController@index');
+        $r->get('/client/stations/{id}/autodj/playlists/{pid}', 'Client\\AutoDjController@showPlaylist');
+        $r->get('/client/stations/{id}/autodj/tracks/{tid}/stream', 'Client\\AutoDjController@streamTrack');
         $r->post('/client/stations/{id}/autodj/upload', 'Client\\AutoDjController@upload', [$csrf]);
         $r->post('/client/stations/{id}/autodj/tracks/{tid}/delete', 'Client\\AutoDjController@deleteTrack', [$csrf]);
         $r->post('/client/stations/{id}/autodj/tracks/bulk-delete', 'Client\\AutoDjController@bulkDeleteTracks', [$csrf]);
@@ -143,6 +147,8 @@ return function (Router $router): void {
 
         // AutoDJ (reseller)
         $r->get('/reseller/stations/{id}/autodj', 'Reseller\\AutoDjController@index');
+        $r->get('/reseller/stations/{id}/autodj/playlists/{pid}', 'Reseller\\AutoDjController@showPlaylist');
+        $r->get('/reseller/stations/{id}/autodj/tracks/{tid}/stream', 'Reseller\\AutoDjController@streamTrack');
         $r->post('/reseller/stations/{id}/autodj/upload', 'Reseller\\AutoDjController@upload', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/tracks/{tid}/delete', 'Reseller\\AutoDjController@deleteTrack', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/tracks/bulk-delete', 'Reseller\\AutoDjController@bulkDeleteTracks', [$csrf]);

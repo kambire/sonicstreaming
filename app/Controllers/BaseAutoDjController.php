@@ -239,6 +239,54 @@ abstract class BaseAutoDjController extends Controller
         $this->back($sid);
     }
 
+    public function showPlaylist(Request $request, string $id, string $pid): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $playlist = Playlist::find((int) $pid);
+        if (!$playlist || (int) $playlist['station_id'] !== $sid) {
+            set_flash('danger', 'Playlist no encontrada.');
+            $this->back($sid);
+        }
+
+        $items = Playlist::items((int) $pid);
+        $allTracks = MediaTrack::forStation($sid);
+
+        $this->view('autodj/playlist_detail', [
+            'title'     => 'Playlist ' . $playlist['name'] . ' · ' . $station['name'],
+            'station'   => $station,
+            'base'      => $this->base,
+            'playlist'  => $playlist,
+            'items'     => $items,
+            'allTracks' => $allTracks,
+        ]);
+    }
+
+    public function streamTrack(Request $request, string $id, string $tid): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $track = MediaTrack::find((int) $tid);
+        if ($track && (int) $track['station_id'] === $sid) {
+            $file = $this->autodj->mediaDir($sid) . '/' . $track['filename'];
+            if (file_exists($file)) {
+                $mime = 'audio/mpeg';
+                $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                if ($ext === 'ogg') $mime = 'audio/ogg';
+                if ($ext === 'wav') $mime = 'audio/wav';
+                if ($ext === 'aac' || $ext === 'm4a') $mime = 'audio/aac';
+                header('Content-Type: ' . $mime);
+                header('Content-Length: ' . filesize($file));
+                header('Accept-Ranges: bytes');
+                readfile($file);
+                exit;
+            }
+        }
+        http_response_code(404);
+        echo 'Audio no encontrado';
+        exit;
+    }
+
     public function createPlaylist(Request $request, string $id): void
     {
         $sid = (int) $id;
