@@ -37,9 +37,9 @@ $eHour = substr((string)($station['relay_end_hour'] ?? '18:00'), 0, 5);
     </div>
 
     <!-- FLASH MESSAGES -->
-    <?php if ($msg = get_flash('success')): ?>
+    <?php if ($fl = flash('success')): ?>
         <div class="alert alert-success alert-dismissible fade show border-0 shadow-sm mb-4" role="alert">
-            <i class="bi bi-check-circle-fill me-2"></i> <?= e($msg) ?>
+            <i class="bi bi-check-circle-fill me-2"></i> <?= e($fl['message'] ?? '') ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     <?php endif; ?>
