@@ -191,8 +191,8 @@ final class AutoDjService
             $streamPipeline = "switch(track_sensitive={$trackSens}, [{$casesStr}])";
         }
 
-        // Solapamiento / Crossfade suave de 3 segundos entre canciones
-        $liq .= "autodj = crossfade(fade_in=3.0, fade_out=3.0, {$streamPipeline})\n\n";
+        // Solapamiento / Crossfade suave de 3 segundos entre canciones (Enganche)
+        $liq .= "autodj = crossfade(duration=3.0, fade_in=3.0, fade_out=3.0, {$streamPipeline})\n\n";
 
         // Cola dinamica para microfono del navegador "Hablar en Vivo" con atenuacion de musica (auto-ducking)
         $liq .= "# Cola de microfono en vivo desvaneciendo volumen de musica\n";
@@ -226,16 +226,25 @@ final class AutoDjService
         return $path;
     }
 
-    /** Salto de canción suave por comando Telnet sin reiniciar el proceso. */
+    /** Salto de canción suave con enganche crossfade por comando Telnet sin reiniciar el proceso. */
     public function skipTrack(array $station): bool
     {
         $sid = (int) $station['id'];
         $port = (int) $station['port'];
         $telnetPort = $port + 20000;
+        $name = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($station['name'] ?? 'radio'));
 
         $fp = @fsockopen('127.0.0.1', $telnetPort, $errno, $errstr, 2);
         if ($fp) {
-            fwrite($fp, "autodj.skip\r\n");
+            $playlists = Playlist::forStation($sid);
+            foreach ($playlists as $pl) {
+                if ((int) $pl['is_active'] === 1) {
+                    $pid = (int) $pl['id'];
+                    fwrite($fp, "pl_{$pid}.skip\r\n");
+                    fwrite($fp, "playlist_{$pid}.m3u.skip\r\n");
+                }
+            }
+            fwrite($fp, "{$name}.skip\r\n");
             fwrite($fp, "quit\r\n");
             fclose($fp);
             return true;
