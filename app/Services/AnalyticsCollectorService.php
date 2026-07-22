@@ -26,10 +26,14 @@ final class AnalyticsCollectorService
         $host = (string) ($station['hostname'] ?? env('SHOUTCAST_HOST', '127.0.0.1'));
         $port = (int) $station['port'];
         $adminPass = (string) ($station['admin_password'] ?? '');
+        $sourcePass = (string) ($station['source_password'] ?? '');
 
-        // Consultar clientes conectados via Shoutcast DNAS2 stats JSON / XML
-        $url = "http://{$host}:{$port}/admin.cgi?mode=viewxml&page=3";
+        // Consultar clientes conectados via Shoutcast DNAS2 XML con sid=1
+        $url = "http://{$host}:{$port}/admin.cgi?sid=1&mode=viewxml&page=3";
         $clients = $this->fetchShoutcastClients($url, $adminPass);
+        if (!$clients && $sourcePass !== '' && $sourcePass !== $adminPass) {
+            $clients = $this->fetchShoutcastClients($url, $sourcePass);
+        }
 
         $activeIps = [];
         $now = date('Y-m-d H:i:s');
@@ -45,7 +49,7 @@ final class AnalyticsCollectorService
             $bytesSent = (int) ($client['bytes_sent'] ?? 0);
 
             // Buscar si ya existe una sesión activa para esta IP y estación
-            $stmt = ListenerSession::db()->prepare(
+            $stmt = \App\Core\Model::db()->prepare(
                 'SELECT id, connected_at FROM listener_sessions 
                  WHERE station_id = ? AND listener_ip = ? AND disconnected_at IS NULL 
                  LIMIT 1'
@@ -59,7 +63,7 @@ final class AnalyticsCollectorService
                 $connAt = strtotime((string) $existing['connected_at']);
                 $duration = max($connectedTimeSec, time() - $connAt);
 
-                $upd = ListenerSession::db()->prepare(
+                $upd = \App\Core\Model::db()->prepare(
                     'UPDATE listener_sessions 
                      SET last_seen_at = ?, duration_seconds = ?, bytes_sent = ? 
                      WHERE id = ?'
@@ -96,13 +100,13 @@ final class AnalyticsCollectorService
                     SET disconnected_at = ? 
                     WHERE station_id = ? AND disconnected_at IS NULL AND listener_ip NOT IN ({$inClause})";
             $params = array_merge([$now, $sid], $activeIps);
-            $stmt = ListenerSession::db()->prepare($sql);
+            $stmt = \App\Core\Model::db()->prepare($sql);
             $stmt->execute($params);
         } else {
             $sql = "UPDATE listener_sessions 
                     SET disconnected_at = ? 
                     WHERE station_id = ? AND disconnected_at IS NULL";
-            $stmt = ListenerSession::db()->prepare($sql);
+            $stmt = \App\Core\Model::db()->prepare($sql);
             $stmt->execute([$now, $sid]);
         }
     }
@@ -110,7 +114,7 @@ final class AnalyticsCollectorService
     /** @return array<int,array{ip:string,user_agent:string,connect_time:int,bytes_sent:int}> */
     private function fetchShoutcastClients(string $url, string $pass): array
     {
-        if (!function_exists('curl_init')) {
+        if (!function_exists('curl_init') || $pass === '') {
             return [];
         }
 
@@ -119,7 +123,7 @@ final class AnalyticsCollectorService
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_TIMEOUT        => 3,
             CURLOPT_CONNECTTIMEOUT => 2,
-            CURLOPT_USERAGENT      => 'Mozilla/5.0',
+            CURLOPT_USERAGENT      => 'SonicStreamingPanel/1.0',
             CURLOPT_HTTPAUTH       => CURLAUTH_BASIC,
             CURLOPT_USERPWD        => 'admin:' . $pass,
         ]);
@@ -134,12 +138,18 @@ final class AnalyticsCollectorService
         @$xml = simplexml_load_string((string) $body);
         if ($xml && isset($xml->LISTENERS->LISTENER)) {
             foreach ($xml->LISTENERS->LISTENER as $l) {
-                $clients[] = [
-                    'ip'           => (string) ($l->HOSTNAME ?? $l->IP ?? ''),
-                    'user_agent'   => (string) ($l->USERAGENT ?? ''),
-                    'connect_time' => (int) ($l->CONNECTTIME ?? 0),
-                    'bytes_sent'   => (int) ($l->BYTES ?? 0),
-                ];
+                $rawIp = (string) ($l->XFF ?? $l->HOSTNAME ?? $l->IP ?? '');
+                if (str_contains($rawIp, ',')) {
+                    $rawIp = trim(explode(',', $rawIp)[0]);
+                }
+                if ($rawIp !== '') {
+                    $clients[] = [
+                        'ip'           => $rawIp,
+                        'user_agent'   => (string) ($l->USERAGENT ?? ''),
+                        'connect_time' => (int) ($l->CONNECTTIME ?? 0),
+                        'bytes_sent'   => (int) ($l->BYTES ?? 0),
+                    ];
+                }
             }
         }
 
