@@ -271,7 +271,10 @@ abstract class BaseAutoDjController extends Controller
         $mediaDir = $this->autodj->mediaDir($sid);
         $targetFile = $mediaDir . '/live_mic_' . time() . '.mp3';
 
-        if (move_uploaded_file($_FILES['mic_audio']['tmp_name'], $targetFile)) {
+        $tmpPath = $_FILES['mic_audio']['tmp_name'];
+        $moved = @move_uploaded_file($tmpPath, $targetFile) || @copy($tmpPath, $targetFile);
+
+        if ($moved) {
             $pushed = $this->autodj->pushLiveMic($station, $targetFile);
             if ($pushed) {
                 ActivityLog::record('autodj_live_mic', 'Station #' . $sid);
