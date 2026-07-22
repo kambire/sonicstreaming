@@ -107,10 +107,16 @@ final class AutoDjService
             }
         }
 
+        $telnetPort = $port + 20000;
+
         $liq  = "#!/usr/bin/liquidsoap\n";
         $liq .= "# Script generado por SonicStreaming Panel. No editar a mano.\n";
         $liq .= "# Estacion #{$sid} - {$station['name']}\n";
         $liq .= "# El log lo captura systemd (journalctl -u liquidsoap@{$sid}).\n\n";
+
+        $liq .= "settings.server.telnet.set(true)\n";
+        $liq .= "settings.server.telnet.port.set({$telnetPort})\n";
+        $liq .= "settings.server.telnet.bind_addr.set(\"127.0.0.1\")\n\n";
 
         if ($sources) {
             $liq .= implode("\n", $sources) . "\n\n";
@@ -185,7 +191,8 @@ final class AutoDjService
             $streamPipeline = "switch(track_sensitive={$trackSens}, [{$casesStr}])";
         }
 
-        $liq .= "autodj = {$streamPipeline}\n";
+        // Solapamiento / Crossfade suave de 3 segundos entre canciones
+        $liq .= "autodj = crossfade(fade_in=3.0, fade_out=3.0, {$streamPipeline})\n";
 
         // Transición suave entre AutoDJ y DJ en vivo
         $liq .= "# Funciones de transicion suave entre AutoDJ y DJ en vivo\n";
@@ -212,6 +219,26 @@ final class AutoDjService
         $path = $this->liqPath($sid);
         file_put_contents($path, $liq);
         return $path;
+    }
+
+    /** Salto de canción suave por comando Telnet sin reiniciar el proceso. */
+    public function skipTrack(array $station): bool
+    {
+        $sid = (int) $station['id'];
+        $port = (int) $station['port'];
+        $telnetPort = $port + 20000;
+
+        $fp = @fsockopen('127.0.0.1', $telnetPort, $errno, $errstr, 2);
+        if ($fp) {
+            fwrite($fp, "autodj.skip\r\n");
+            fwrite($fp, "quit\r\n");
+            fclose($fp);
+            return true;
+        }
+
+        // Si no responde telnet, recargar
+        $this->reloadIfRunning($station);
+        return false;
     }
 
     /** @param array<string,mixed> $station */

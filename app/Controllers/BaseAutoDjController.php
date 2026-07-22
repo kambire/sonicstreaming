@@ -252,9 +252,9 @@ abstract class BaseAutoDjController extends Controller
     {
         $sid = (int) $id;
         $station = $this->guard($sid);
-        $this->autodj->reloadIfRunning($station);
+        $this->autodj->skipTrack($station);
         ActivityLog::record('autodj_skip', 'Station #' . $sid);
-        set_flash('success', 'Canción saltada. Transmitiendo siguiente tema.');
+        set_flash('success', 'Tema saltado con atenuación y solapamiento suave al aire.');
         $this->back($sid);
     }
 
