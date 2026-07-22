@@ -399,9 +399,11 @@ function copyInput(inputId, btn) {
         <div class="modal-content bg-dark border-success text-white shadow-lg" style="border-radius: 16px;">
             <div class="modal-header border-secondary border-opacity-25">
                 <h5 class="modal-title fw-bold text-success"><i class="bi bi-arrow-repeat me-2"></i> Configuración de Re-transmisión Relay</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <form method="post" action="<?= url('client/stations/' . $station['id'] . '/settings') ?>">
+            <?php 
+                $userRole = auth()['role'] ?? 'client';
+                $baseRole = ($userRole === 'admin') ? 'admin' : (($userRole === 'reseller') ? 'reseller' : 'client');
+            ?>
+            <form method="post" action="<?= url($baseRole . '/stations/' . $station['id'] . '/settings') ?>">
                 <?= \App\Core\Csrf::field() ?>
                 <div class="modal-body py-4">
                     <p class="small text-white-50 mb-3">

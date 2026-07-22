@@ -71,7 +71,17 @@ final class StationController extends Controller
 
     public function updateSettings(Request $request, string $id): void
     {
-        $station = $this->mustOwn((int) $id);
+        $station = Station::findWithServer((int) $id);
+        if (!$station) {
+            http_response_code(404);
+            return;
+        }
+
+        if (Auth::role() === 'client' && (int) $station['user_id'] !== (int) Auth::id()) {
+            http_response_code(403);
+            return;
+        }
+
         $type = $request->str('type', $station['type']);
         if (!in_array($type, ['live', 'relay'], true)) {
             $type = 'live';
@@ -99,7 +109,10 @@ final class StationController extends Controller
 
         ActivityLog::record('station_settings', 'Station #' . $id);
         set_flash('success', 'Configuración de emisora y Re-transmisión Relay guardada.');
-        redirect('client/stations/' . $id);
+
+        $role = Auth::role();
+        $base = ($role === 'admin') ? 'admin' : (($role === 'reseller') ? 'reseller' : 'client');
+        redirect($base . '/stations/' . $id);
     }
 
     private function action(int $id, string $action): void

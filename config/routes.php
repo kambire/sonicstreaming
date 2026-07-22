@@ -72,6 +72,7 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/start', 'Admin\\StationController@start', [$csrf]);
         $r->post('/admin/stations/{id}/stop', 'Admin\\StationController@stop', [$csrf]);
         $r->post('/admin/stations/{id}/restart', 'Admin\\StationController@restart', [$csrf]);
+        $r->post('/admin/stations/{id}/settings', 'Client\\StationController@updateSettings', [$csrf]);
 
         // AutoDJ (admin)
         $r->get('/admin/stations/{id}/autodj', 'Admin\\AutoDjController@index');
@@ -159,6 +160,7 @@ return function (Router $router): void {
         $r->post('/reseller/stations/{id}/start', 'Reseller\\StationController@start', [$csrf]);
         $r->post('/reseller/stations/{id}/stop', 'Reseller\\StationController@stop', [$csrf]);
         $r->post('/reseller/stations/{id}/restart', 'Reseller\\StationController@restart', [$csrf]);
+        $r->post('/reseller/stations/{id}/settings', 'Client\\StationController@updateSettings', [$csrf]);
 
         // AutoDJ (reseller)
         $r->get('/reseller/stations/{id}/autodj', 'Reseller\\AutoDjController@index');
