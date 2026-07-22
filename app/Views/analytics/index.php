@@ -173,12 +173,44 @@ $apiUrl = url($base . '/stations/' . $sid . '/analytics/api');
     </div>
 </div>
 
+<style>
+.beacon-live {
+    position: relative;
+    width: 26px;
+    height: 26px;
+}
+.beacon-live .dot {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 14px; height: 14px;
+    margin: -7px 0 0 -7px;
+    background: #2ecc71;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #2ecc71;
+}
+.beacon-live::after {
+    content: '';
+    position: absolute;
+    width: 34px; height: 34px;
+    top: 50%; left: 50%;
+    margin: -17px 0 0 -17px;
+    border: 2px solid #2ecc71;
+    border-radius: 50%;
+    animation: beacon-ping 1.6s infinite ease-out;
+}
+@keyframes beacon-ping {
+    0% { transform: scale(0.3); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+}
+</style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const apiUrl = '<?= $apiUrl ?>?days=<?= $days ?>';
 
     // Inicializar Mapa Leaflet con modo oscuro CartoDB Dark
-    const map = L.map('analyticsMap').setView([-25.2637, -57.5759], 2);
+    const map = L.map('analyticsMap').setView([-25.2637, -57.5759], 3);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; OpenStreetMap &copy; CARTO',
         maxZoom: 18
@@ -186,99 +218,127 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let historyChart;
     let deviceChart;
+    let markerLayerGroup = L.featureGroup().addTo(map);
 
-    // Cargar datos API
-    fetch(apiUrl)
-        .then(r => r.json())
-        .then(data => {
-            if (!data.ok) return;
+    const liveIcon = L.divIcon({
+        className: 'beacon-live-container',
+        html: '<div class="beacon-live"><span class="dot"></span></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13]
+    });
 
-            // 1. Agregar Marcadores en el Mapa
-            const markers = data.markers || [];
-            document.getElementById('mapMarkerCount').textContent = markers.length + ' ubicaciones encontradas';
+    function loadAnalyticsData() {
+        fetch(apiUrl)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.ok) return;
 
-            const markerGroup = L.featureGroup();
-            markers.forEach(m => {
-                const lat = parseFloat(m.latitude);
-                const lng = parseFloat(m.longitude);
-                if (isNaN(lat) || isNaN(lng)) return;
+                markerLayerGroup.clearLayers();
+                const markers = data.markers || [];
+                document.getElementById('mapMarkerCount').textContent = markers.length + ' ubicaciones encontradas';
 
-                const isLive = parseInt(m.is_live) === 1;
-                const markerColor = isLive ? '#2ecc71' : '#3498db';
+                let firstLiveMarker = null;
 
-                const circleMarker = L.circleMarker([lat, lng], {
-                    radius: isLive ? 8 : 6,
-                    fillColor: markerColor,
-                    color: '#ffffff',
-                    weight: 1.5,
-                    opacity: 1,
-                    fillOpacity: 0.8
-                });
+                markers.forEach(m => {
+                    const lat = parseFloat(m.latitude);
+                    const lng = parseFloat(m.longitude);
+                    if (isNaN(lat) || isNaN(lng)) return;
 
-                const popupHtml = `
-                    <div style="min-width:180px; font-family:sans-serif;">
-                        <strong style="color:${markerColor};">${isLive ? '🔴 EN VIVO' : '⏱️ Histórico'}</strong><br>
-                        <strong>${m.city || 'Desconocida'}, ${m.country || ''}</strong><br>
-                        <small>IP: ${m.listener_ip}</small><br>
-                        <small>App: ${m.player_name || 'Desconocida'}</small><br>
-                        <small>Tiempo: ${Math.round((m.duration_seconds || 0)/60)} min</small>
-                    </div>
-                `;
-                circleMarker.bindPopup(popupHtml);
-                circleMarker.addTo(markerGroup);
-            });
+                    const isLive = parseInt(m.is_live) === 1;
+                    let marker;
 
-            markerGroup.addTo(map);
-            if (markers.length > 0) {
-                map.fitBounds(markerGroup.getBounds(), { padding: [30, 30], maxZoom: 6 });
-            }
-
-            // 2. Grafico Tendencia de Oyentes
-            const ctxHist = document.getElementById('analyticsHistoryChart');
-            if (ctxHist && data.history) {
-                historyChart = new Chart(ctxHist, {
-                    type: 'line',
-                    data: {
-                        labels: data.history.labels || [],
-                        datasets: [{
-                            label: 'Oyentes Simultáneos',
-                            data: data.history.data || [],
-                            borderColor: '#0dcaf0',
-                            backgroundColor: 'rgba(13,202,240,0.15)',
-                            fill: true,
-                            tension: 0.3,
-                            pointRadius: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { display: false } },
-                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                    if (isLive) {
+                        marker = L.marker([lat, lng], { icon: liveIcon });
+                        if (!firstLiveMarker) firstLiveMarker = marker;
+                    } else {
+                        marker = L.circleMarker([lat, lng], {
+                            radius: 6,
+                            fillColor: '#3498db',
+                            color: '#ffffff',
+                            weight: 1.5,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        });
                     }
-                });
-            }
 
-            // 3. Grafico Donut Dispositivos
-            const ctxDev = document.getElementById('deviceChart');
-            if (ctxDev && data.devices) {
-                const devLabels = (data.devices || []).map(d => d.device_type.toUpperCase());
-                const devData   = (data.devices || []).map(d => d.count);
-                deviceChart = new Chart(ctxDev, {
-                    type: 'doughnut',
-                    data: {
-                        labels: devLabels.length ? devLabels : ['SIN DATOS'],
-                        datasets: [{
-                            data: devData.length ? devData : [1],
-                            backgroundColor: ['#0dcaf0', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6']
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        plugins: { legend: { position: 'bottom' } }
-                    }
+                    const popupHtml = `
+                        <div style="min-width:190px; font-family:sans-serif; padding:2px;">
+                            <strong style="color:${isLive ? '#2ecc71' : '#3498db'}; fs-6">
+                                ${isLive ? '🔴 OYENTE EN VIVO AL AIRE' : '⏱️ Sesión Histórica'}
+                            </strong><br>
+                            <div style="margin-top:4px;">
+                                <strong>📍 ${m.city || 'Desconocida'}, ${m.country || ''}</strong><br>
+                                <span style="color:#6c757d; font-size:12px;">IP: ${m.listener_ip}</span><br>
+                                <span style="color:#6c757d; font-size:12px;">App: ${m.player_name || 'Desconocida'}</span><br>
+                                <span style="color:#6c757d; font-size:12px;">Tiempo: ${Math.round((m.duration_seconds || 0)/60)} min</span>
+                            </div>
+                        </div>
+                    `;
+                    marker.bindPopup(popupHtml);
+                    marker.addTo(markerLayerGroup);
                 });
-            }
-        })
-        .catch(err => console.error('Error cargando analíticas API:', err));
+
+                if (markers.length > 0 && markerLayerGroup.getLayers().length > 0) {
+                    map.fitBounds(markerLayerGroup.getBounds(), { padding: [40, 40], maxZoom: 7 });
+                    if (firstLiveMarker) {
+                        firstLiveMarker.openPopup();
+                    }
+                }
+
+                // 2. Grafico Tendencia de Oyentes
+                const ctxHist = document.getElementById('analyticsHistoryChart');
+                if (ctxHist && data.history && !historyChart) {
+                    historyChart = new Chart(ctxHist, {
+                        type: 'line',
+                        data: {
+                            labels: data.history.labels || [],
+                            datasets: [{
+                                label: 'Oyentes Simultáneos',
+                                data: data.history.data || [],
+                                borderColor: '#0dcaf0',
+                                backgroundColor: 'rgba(13,202,240,0.15)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { display: false } },
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                        }
+                    });
+                } else if (historyChart && data.history) {
+                    historyChart.data.labels = data.history.labels || [];
+                    historyChart.data.datasets[0].data = data.history.data || [];
+                    historyChart.update('none');
+                }
+
+                // 3. Grafico Donut Dispositivos
+                const ctxDev = document.getElementById('deviceChart');
+                if (ctxDev && data.devices && !deviceChart) {
+                    const devLabels = (data.devices || []).map(d => d.device_type.toUpperCase());
+                    const devData   = (data.devices || []).map(d => d.count);
+                    deviceChart = new Chart(ctxDev, {
+                        type: 'doughnut',
+                        data: {
+                            labels: devLabels.length ? devLabels : ['SIN DATOS'],
+                            datasets: [{
+                                data: devData.length ? devData : [1],
+                                backgroundColor: ['#0dcaf0', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6']
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: { legend: { position: 'bottom' } }
+                        }
+                    });
+                }
+            })
+            .catch(err => console.error('Error cargando analíticas API:', err));
+    }
+
+    loadAnalyticsData();
+    setInterval(loadAnalyticsData, 10000);
 });
 </script>
