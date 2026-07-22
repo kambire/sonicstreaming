@@ -35,3 +35,12 @@ require BASE_PATH . '/app/Core/helpers.php';
 \App\Core\Env::load(BASE_PATH . '/.env');
 
 date_default_timezone_set((string) env('APP_TIMEZONE', 'UTC'));
+
+if (env('APP_DEBUG', false) === true) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', '1');
+    ini_set('display_startup_errors', '1');
+} else {
+    error_reporting(0);
+    ini_set('display_errors', '0');
+}

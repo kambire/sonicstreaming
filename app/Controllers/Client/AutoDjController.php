@@ -15,9 +15,13 @@ final class AutoDjController extends BaseAutoDjController
     protected function authorizeStation(int $id): ?array
     {
         $station = Station::findWithServer($id);
-        if (!$station || (int) $station['user_id'] !== Auth::id()) {
+        if (!$station) {
             return null;
         }
-        return $station;
+        $user = Auth::user();
+        if ($user && ($user['role'] === 'admin' || (int) $station['user_id'] === (int) $user['id'])) {
+            return $station;
+        }
+        return null;
     }
 }

@@ -7,7 +7,6 @@ namespace App\Controllers\Reseller;
 use App\Controllers\BaseAutoDjController;
 use App\Core\Auth;
 use App\Models\Station;
-use App\Models\User;
 
 final class AutoDjController extends BaseAutoDjController
 {
@@ -19,10 +18,10 @@ final class AutoDjController extends BaseAutoDjController
         if (!$station) {
             return null;
         }
-        $owner = User::find((int) $station['user_id']);
-        if (!$owner || (int) ($owner['reseller_id'] ?? 0) !== Auth::id()) {
-            return null;
+        $user = Auth::user();
+        if ($user && ($user['role'] === 'admin' || (int) $station['user_id'] === (int) $user['id'])) {
+            return $station;
         }
-        return $station;
+        return null;
     }
 }
