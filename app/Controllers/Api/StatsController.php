@@ -22,6 +22,9 @@ final class StatsController extends Controller
             return;
         }
         $stats = (new ShoutcastService())->fetchStats($station);
+        try {
+            (new \App\Services\AnalyticsCollectorService())->syncActiveListeners($station);
+        } catch (\Throwable $e) {}
         $this->json($stats);
     }
 
