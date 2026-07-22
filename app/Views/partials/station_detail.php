@@ -393,6 +393,44 @@ function copyInput(inputId, btn) {
 }
 </script>
 
+<!-- MODAL INTERACTIVO DE CONFIGURACIÓN DE RE-TRANSMISIÓN RELAY -->
+<div class="modal fade" id="relayConfigModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-success text-white shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold text-success"><i class="bi bi-arrow-repeat me-2"></i> Configuración de Re-transmisión Relay</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="<?= url('client/stations/' . $station['id'] . '/settings') ?>">
+                <?= \App\Core\Csrf::field() ?>
+                <div class="modal-body py-4">
+                    <p class="small text-white-50 mb-3">
+                        Configura el origen para re-transmitir una señal de radio externa en cualquier formato (MP3, AAC, Icecast, Shoutcast, M3U, PLS).
+                    </p>
+
+                    <div class="mb-3">
+                        <label class="form-label text-light fw-bold">Modo de Operación de la Emisora</label>
+                        <select name="type" class="form-select bg-dark text-white border-secondary">
+                            <option value="live" <?= ($station['type'] ?? 'live') === 'live' ? 'selected' : '' ?>>📻 Radio Normal (Emisión en vivo / AutoDJ local)</option>
+                            <option value="relay" <?= ($station['type'] ?? 'live') === 'relay' ? 'selected' : '' ?>>🔄 Radio Relay (Retransmisión continua de stream externo)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-light fw-bold">URL de Stream Relay Externo (Fuente Originaria)</label>
+                        <input type="url" name="relay_url" class="form-control bg-dark text-white border-secondary font-monospace" placeholder="http://servidor-externo.com:8000/stream" value="<?= e($station['relay_url'] ?? '') ?>">
+                        <div class="form-text text-muted">Ejemplo: <code>http://radio-remota.com:8000/stream</code> o <code>https://stream.dominio.com/radio.mp3</code>.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-success fw-bold"><i class="bi bi-check-lg me-1"></i> Guardar y Aplicar Relay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- MODAL INTERACTIVO DE MICRÓFONO WEB STUDIO "HABLAR EN VIVO" -->
 <div class="modal fade" id="micStudioModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

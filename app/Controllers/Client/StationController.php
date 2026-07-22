@@ -72,16 +72,33 @@ final class StationController extends Controller
     public function updateSettings(Request $request, string $id): void
     {
         $station = $this->mustOwn((int) $id);
+        $type = $request->str('type', $station['type']);
+        if (!in_array($type, ['live', 'relay'], true)) {
+            $type = 'live';
+        }
+
         $data = [
-            'name'  => $request->str('name', $station['name']),
-            'genre' => $request->str('genre'),
+            'name'      => $request->str('name', $station['name']),
+            'genre'     => $request->str('genre'),
+            'type'      => $type,
+            'relay_url' => $request->str('relay_url'),
         ];
         if ($request->str('source_password') !== '') {
             $data['source_password'] = $request->str('source_password');
         }
+
         Station::update((int) $id, $data);
+
+        // Regenerar configuraciones de Shoutcast y AutoDj
+        $updatedStation = Station::findWithServer((int) $id);
+        if ($updatedStation) {
+            $this->shoutcast->generateConfig($updatedStation);
+            $autodj = new \App\Services\AutoDjService();
+            $autodj->reloadIfRunning($updatedStation);
+        }
+
         ActivityLog::record('station_settings', 'Station #' . $id);
-        set_flash('success', 'Ajustes guardados. Reinicia la estacion para aplicarlos al stream.');
+        set_flash('success', 'Configuración de emisora y Re-transmisión Relay guardada.');
         redirect('client/stations/' . $id);
     }
 
