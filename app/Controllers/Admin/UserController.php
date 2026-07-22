@@ -13,11 +13,12 @@ final class UserController extends Controller
 {
     public function index(Request $request): void
     {
-        // Todos menos el propio admin logueado; mostramos clientes y resellers.
-        $users = User::where(['role' => 'client'], 'name ASC');
+        $admins    = User::where(['role' => 'admin'], 'name ASC');
+        $users     = User::where(['role' => 'client'], 'name ASC');
         $resellers = User::where(['role' => 'reseller'], 'name ASC');
         $this->view('admin/users/index', [
-            'title'     => 'Clientes y resellers',
+            'title'     => 'Usuarios del sistema',
+            'admins'    => $admins,
             'clients'   => $users,
             'resellers' => $resellers,
         ]);
@@ -109,7 +110,7 @@ final class UserController extends Controller
             set_flash('danger', 'Ya existe un usuario con ese correo.');
             return null;
         }
-        if (!in_array($role, ['client', 'reseller'], true)) {
+        if (!in_array($role, ['client', 'reseller', 'admin'], true)) {
             $role = 'client';
         }
         if ($ignoreId === null && (string) $request->input('password', '') === '') {

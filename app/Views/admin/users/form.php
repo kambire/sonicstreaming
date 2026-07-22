@@ -29,6 +29,7 @@ $resellerId = (string) ($user['reseller_id'] ?? old('reseller_id', ''));
                 <select name="role" class="form-select" id="roleSelect">
                     <option value="client"   <?= $role === 'client' ? 'selected' : '' ?>>Cliente</option>
                     <option value="reseller" <?= $role === 'reseller' ? 'selected' : '' ?>>Reseller</option>
+                    <option value="admin"    <?= $role === 'admin' ? 'selected' : '' ?>>Administrador</option>
                 </select>
             </div>
             <div class="col-md-6">

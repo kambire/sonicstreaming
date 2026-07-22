@@ -1,7 +1,30 @@
-<?php /** @var array $clients; @var array $resellers */ ?>
+<?php /** @var array $admins; @var array $clients; @var array $resellers */ ?>
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <h5 class="mb-0">Clientes y resellers</h5>
+    <h5 class="mb-0">Usuarios del sistema</h5>
     <a href="<?= url('admin/users/create') ?>" class="btn btn-sm btn-primary"><i class="bi bi-person-plus"></i> Nuevo usuario</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Administradores</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead><tr><th>Nombre</th><th>Correo</th><th>Telefono</th><th>Estado</th><th></th></tr></thead>
+            <tbody>
+            <?php if (empty($admins)): ?><tr><td colspan="5" class="text-center text-muted py-3">Sin administradores.</td></tr><?php endif; ?>
+            <?php foreach ($admins as $u): ?>
+                <tr>
+                    <td><i class="bi bi-shield-lock"></i> <?= e($u['name']) ?></td>
+                    <td class="small"><?= e($u['email']) ?></td>
+                    <td class="small"><?= e($u['phone'] ?? '') ?></td>
+                    <td><?= status_badge($u['status']) ?></td>
+                    <td class="text-end">
+                        <a href="<?= url('admin/users/' . $u['id'] . '/edit') ?>" class="btn btn-sm btn-outline-light"><i class="bi bi-pencil"></i></a>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <div class="card mb-4">
