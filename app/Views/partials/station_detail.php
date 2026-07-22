@@ -78,33 +78,70 @@ $running = ($station['status'] ?? '') === 'running';
         </div>
     </div>
 
-    <!-- Datos de conexion -->
+    <!-- Datos de conexion en Vivo -->
     <div class="col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><i class="bi bi-shield-check text-success"></i> Datos de conexión y Streaming SSL</div>
+        <div class="card h-100 shadow-sm border-info">
+            <div class="card-header bg-info-subtle fw-bold text-info-emphasis d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-broadcast text-info"></i> Conexión en Vivo (VirtualDJ, ZaraRadio, OBS, RadioBOSS)</span>
+                <span class="badge bg-info">Encoder / DJ</span>
+            </div>
             <div class="card-body small">
-                <div class="mb-3">
-                    <span class="badge bg-success mb-1"><i class="bi bi-lock-fill"></i> Stream HTTPS / SSL (Navegadores y Web Players)</span><br>
-                    <code class="copyable fs-6 text-success"><?= e($streamUrlSsl) ?></code>
-                    <div class="form-text">Usa esta URL para reproductores HTML5 o sitios web con SSL (HTTPS).</div>
+                <div class="alert alert-dark p-2 mb-3 border">
+                    <i class="bi bi-info-circle text-info"></i> Usa estos datos en tu programa de transmisión (VirtualDJ, ZaraRadio, BUTT, RadioBOSS, OBS, Mixxx) para emitir en vivo a la radio.
                 </div>
-                <div class="mb-3">
-                    <audio controls preload="none" class="w-100" src="<?= e($streamUrlSsl) ?>"></audio>
+
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered align-middle mb-2">
+                        <tbody>
+                            <tr>
+                                <th class="bg-body-tertiary" style="width:40%;">Servidor / Host</th>
+                                <td>
+                                    <code class="copyable text-info fw-bold"><?= e($domain) ?></code>
+                                    <span class="text-muted ms-1">(IP: <code><?= e($host) ?></code>)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Puerto DJ (AutoDJ Harbor)</th>
+                                <td>
+                                    <code class="copyable text-success fw-bold"><?= (int) ($station['dj_port'] ?? ($port + 10000)) ?></code>
+                                    <span class="badge bg-success ms-1">Recomendado DJ en Vivo</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Puerto Directo (Shoutcast)</th>
+                                <td>
+                                    <code class="copyable"><?= $port ?></code>
+                                    <span class="text-muted ms-1">(Sin AutoDJ)</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Punto de Montaje (Mount)</th>
+                                <td><code class="copyable">/stream</code> <span class="text-muted">(Shoutcast / Icecast)</span></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Usuario (Source User)</th>
+                                <td><code class="copyable">source</code> <span class="text-muted">(o vacio según programa)</span></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Contraseña (Source Password)</th>
+                                <td><code class="copyable fw-bold text-danger"><?= e($station['source_password']) ?></code></td>
+                            </tr>
+                            <tr>
+                                <th class="bg-body-tertiary">Formato / Bitrate Máx</th>
+                                <td><code>MP3</code> / <code>AAC+</code> a <strong><?= (int) $station['max_bitrate'] ?> kbps</strong> (Oyentes máx: <?= (int) $station['max_listeners'] ?>)</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="mb-2">
-                    <span class="text-muted">Stream Directo HTTP:</span><br>
-                    <code class="copyable"><?= e($streamUrlHttp) ?></code>
+
+                <div class="bg-body-tertiary p-2 rounded border mt-2">
+                    <strong class="d-block mb-1 text-muted"><i class="bi bi-sliders"></i> Ejemplos por programa:</strong>
+                    <ul class="mb-0 ps-3 text-muted">
+                        <li><strong>VirtualDJ / RadioBOSS:</strong> Servidor: <code><?= e($domain) ?>:<?= (int) ($station['dj_port'] ?? ($port + 10000)) ?></code> | Pass: <code><?= e($station['source_password']) ?></code> | Tipo: <code>Shoutcast</code></li>
+                        <li><strong>ZaraRadio + Oddcast / BUTT:</strong> Host: <code><?= e($domain) ?></code> | Port: <code><?= (int) ($station['dj_port'] ?? ($port + 10000)) ?></code> | Pass: <code><?= e($station['source_password']) ?></code> | Mount: <code>/stream</code></li>
+                        <li><strong>OBS Studio:</strong> Tipo: Custom HTTP/Icecast | URL: <code>icecast://<?= e($domain) ?>:<?= (int) ($station['dj_port'] ?? ($port + 10000)) ?>/stream</code></li>
+                    </ul>
                 </div>
-                <div class="mb-2"><span class="text-muted">Servidor DJ / Encoder:</span><br>
-                    Host <code><?= e($domain) ?></code> · Puerto <code><?= $port ?></code> · Mount <code>/stream</code></div>
-                <div class="mb-2"><span class="text-muted">Contraseña de fuente (source):</span><br>
-                    <code class="copyable"><?= e($station['source_password']) ?></code></div>
-                <?php if ($showSensitive && !empty($adminPass)): ?>
-                    <div class="mb-2"><span class="text-muted">Panel Admin Shoutcast (SSL):</span><br>
-                        <code><?= e($adminUrlSsl) ?></code> · user <code>admin</code> · pass <code class="copyable"><?= e($adminPass) ?></code></div>
-                <?php endif; ?>
-                <div><span class="text-muted">Bitrate máx:</span> <?= (int) $station['max_bitrate'] ?> kbps ·
-                     <span class="text-muted">Oyentes máx:</span> <?= (int) $station['max_listeners'] ?></div>
             </div>
         </div>
     </div>
