@@ -213,13 +213,21 @@ final class AutoDjService
 
         $rawRelayUrl = trim((string) ($station['relay_url'] ?? ''));
         $relayUrl = $this->resolveRelayUrl($rawRelayUrl);
-        if ($relayUrl !== '') {
-            $liq .= "# Fuente de retransmision Relay externa con decodificador universal FFmpeg (MP3/AAC/HE-AAC/M3U/PLS)\n";
-            $liq .= "relay_stream = mksafe(input.ffmpeg(\"{$relayUrl}\"))\n\n";
-            $fallbackSources = "[live, mksafe(autodj_mic), relay_stream]";
-        } else {
-            $fallbackSources = "[live, mksafe(autodj_mic)]";
+
+        $sourcesList = ['live'];
+
+        $autodjRunning = ((int) ($station['autodj_enabled'] ?? 0) === 1 && (string) ($station['autodj_status'] ?? 'stopped') === 'running');
+        if ($autodjRunning) {
+            $sourcesList[] = 'mksafe(autodj_mic)';
         }
+
+        if ($relayUrl !== '') {
+            $liq .= "# Fuente de retransmision Relay externa con decodificador universal FFmpeg\n";
+            $liq .= "relay_stream = mksafe(input.ffmpeg(\"{$relayUrl}\"))\n\n";
+            $sourcesList[] = 'relay_stream';
+        }
+
+        $fallbackSources = '[' . implode(', ', $sourcesList) . ']';
 
         // Entrada de DJ en vivo (harbor)
         $liq .= "live = input.harbor(\"/stream\", port={$djPort}, password=\"{$sourcePass}\")\n";
