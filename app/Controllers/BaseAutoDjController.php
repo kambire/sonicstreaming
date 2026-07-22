@@ -33,14 +33,16 @@ abstract class BaseAutoDjController extends Controller
 
     private function guard(int $id): array
     {
+        if (!\App\Core\Auth::check()) {
+            redirect('login');
+        }
         $station = $this->authorizeStation($id);
         if (!$station) {
-            http_response_code(404);
-            echo \App\Core\View::render('errors/404', [], 'layouts/blank');
-            exit;
+            set_flash('danger', 'No tienes permisos para gestionar esta estación o la estación no existe.');
+            redirect($this->base . '/dashboard');
         }
         if ((int) ($station['autodj_enabled'] ?? 0) !== 1) {
-            set_flash('warning', 'El AutoDJ no esta habilitado para esta estacion.');
+            set_flash('warning', 'El AutoDJ no está habilitado para esta estación.');
             redirect($this->base . '/stations/' . $id);
         }
         return $station;
