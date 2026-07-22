@@ -85,6 +85,7 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/tracks', 'Admin\\AutoDjController@addTrack', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/items/{itemId}/remove', 'Admin\\AutoDjController@removeItem', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/skip', 'Admin\\AutoDjController@skipTrack', [$csrf]);
+        $r->post('/admin/stations/{id}/autodj/broadcast-mic', 'Admin\\AutoDjController@broadcastMic', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/start', 'Admin\\AutoDjController@start', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/stop', 'Admin\\AutoDjController@stop', [$csrf]);
 
@@ -130,6 +131,7 @@ return function (Router $router): void {
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/tracks', 'Client\\AutoDjController@addTrack', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/items/{itemId}/remove', 'Client\\AutoDjController@removeItem', [$csrf]);
         $r->post('/client/stations/{id}/autodj/skip', 'Client\\AutoDjController@skipTrack', [$csrf]);
+        $r->post('/client/stations/{id}/autodj/broadcast-mic', 'Client\\AutoDjController@broadcastMic', [$csrf]);
         $r->post('/client/stations/{id}/autodj/start', 'Client\\AutoDjController@start', [$csrf]);
         $r->post('/client/stations/{id}/autodj/stop', 'Client\\AutoDjController@stop', [$csrf]);
 

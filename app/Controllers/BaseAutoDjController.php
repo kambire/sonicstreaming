@@ -258,6 +258,31 @@ abstract class BaseAutoDjController extends Controller
         $this->back($sid);
     }
 
+    public function broadcastMic(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+
+        if (empty($_FILES['mic_audio']['tmp_name']) || $_FILES['mic_audio']['error'] !== UPLOAD_ERR_OK) {
+            $this->json(['ok' => false, 'message' => 'No se recibió ningún archivo de audio del micrófono.'], 400);
+            return;
+        }
+
+        $mediaDir = $this->autodj->mediaDir($sid);
+        $targetFile = $mediaDir . '/live_mic_' . time() . '.mp3';
+
+        if (move_uploaded_file($_FILES['mic_audio']['tmp_name'], $targetFile)) {
+            $pushed = $this->autodj->pushLiveMic($station, $targetFile);
+            if ($pushed) {
+                ActivityLog::record('autodj_live_mic', 'Station #' . $sid);
+                $this->json(['ok' => true, 'message' => '¡Voz transmitida al aire con atenuación de música!']);
+                return;
+            }
+        }
+
+        $this->json(['ok' => false, 'message' => 'Error al procesar el audio del micrófono en el servidor.'], 500);
+    }
+
     public function start(Request $request, string $id): void
     {
         $sid = (int) $id;

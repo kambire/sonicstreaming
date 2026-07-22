@@ -192,7 +192,12 @@ final class AutoDjService
         }
 
         // Solapamiento / Crossfade suave de 3 segundos entre canciones
-        $liq .= "autodj = crossfade(fade_in=3.0, fade_out=3.0, {$streamPipeline})\n";
+        $liq .= "autodj = crossfade(fade_in=3.0, fade_out=3.0, {$streamPipeline})\n\n";
+
+        // Cola dinamica para microfono del navegador "Hablar en Vivo" con atenuacion de musica (auto-ducking)
+        $liq .= "# Cola de microfono en vivo desvaneciendo volumen de musica\n";
+        $liq .= "mic_queue = request.queue(id=\"mic_stream\")\n";
+        $liq .= "autodj_mic = smooth_add(normal=autodj, special=mic_queue)\n\n";
 
         // Transición suave entre AutoDJ y DJ en vivo
         $liq .= "# Funciones de transicion suave entre AutoDJ y DJ en vivo\n";
@@ -205,7 +210,7 @@ final class AutoDjService
 
         // Entrada de DJ en vivo (harbor)
         $liq .= "live = input.harbor(\"/stream\", port={$djPort}, password=\"{$sourcePass}\")\n";
-        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, mksafe(autodj)])\n\n";
+        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, mksafe(autodj_mic)])\n\n";
 
         // Salida hacia Shoutcast (sc_serv) como fuente
         $liq .= "output.shoutcast(\n";
@@ -238,6 +243,23 @@ final class AutoDjService
 
         // Si no responde telnet, recargar
         $this->reloadIfRunning($station);
+        return false;
+    }
+
+    /** Transmite un archivo de audio grabado por el micrófono del navegador desvaneciendo la música al aire. */
+    public function pushLiveMic(array $station, string $audioFilePath): bool
+    {
+        $sid = (int) $station['id'];
+        $port = (int) $station['port'];
+        $telnetPort = $port + 20000;
+
+        $fp = @fsockopen('127.0.0.1', $telnetPort, $errno, $errstr, 2);
+        if ($fp) {
+            fwrite($fp, "mic_stream.push {$audioFilePath}\r\n");
+            fwrite($fp, "quit\r\n");
+            fclose($fp);
+            return true;
+        }
         return false;
     }
 

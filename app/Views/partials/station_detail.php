@@ -33,6 +33,10 @@ $autodjRunning = ($station['autodj_status'] ?? 'stopped') === 'running';
     </div>
     
     <div class="btn-toolbar gap-2">
+        <button type="button" class="btn btn-sm btn-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#micStudioModal">
+            <i class="bi bi-mic-fill me-1"></i> 🎙️ Hablar en Vivo
+        </button>
+
         <?php if ($station['autodj_enabled'] ?? 0): ?>
             <a href="<?= url($base . '/stations/' . $sid . '/autodj') ?>" class="btn btn-sm btn-info fw-bold text-dark shadow-sm">
                 <i class="bi bi-music-note-list"></i> AutoDJ & Playlists
@@ -373,4 +377,159 @@ function copyInput(inputId, btn) {
         }, 2000);
     }
 }
+</script>
+
+<!-- MODAL INTERACTIVO DE MICRÓFONO WEB STUDIO "HABLAR EN VIVO" -->
+<div class="modal fade" id="micStudioModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-danger text-white shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-mic-fill me-2"></i> Estudio de Micrófono "Hablar en Vivo"</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <p class="small text-muted mb-3">
+                    Habla directamente a la radio desde tu navegador. Al finalizar, la voz saldrá al aire atenuando automáticamente la música (Auto-Ducking).
+                </p>
+
+                <div class="mb-4">
+                    <div id="micStatusBadge" class="badge bg-secondary px-3 py-2 fs-6 mb-3">En Espera (Clic para iniciar)</div>
+                    
+                    <div class="d-flex justify-content-center align-items-center mb-3">
+                        <button type="button" id="recordMicBtn" class="btn btn-danger rounded-circle p-4 shadow-lg border border-3 border-danger-subtle d-flex align-items-center justify-content-center" style="width: 100px; height: 100px; transition: transform 0.2s;">
+                            <i class="bi bi-mic-fill fs-1" id="micIcon"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="recordingTimer" class="font-monospace fs-4 fw-bold text-danger d-none">00:00</div>
+                    
+                    <!-- VUMETER DE NIVEL DE AUDIO -->
+                    <div class="progress bg-secondary bg-opacity-30 mt-3 mx-auto" style="height: 12px; max-width: 320px; border-radius: 6px;">
+                        <div id="vumeterBar" class="progress-bar bg-danger transition-none" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div id="micActions" class="d-none gap-2 justify-content-center">
+                    <button type="button" id="discardMicBtn" class="btn btn-outline-secondary btn-sm"><i class="bi bi-trash"></i> Descartar</button>
+                    <button type="button" id="sendMicBtn" class="btn btn-success btn-sm fw-bold px-4"><i class="bi bi-broadcast"></i> Transmitir al Aire Ahora</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    let mediaRecorder;
+    let audioChunks = [];
+    let audioContext, analyser, microphone, javascriptNode;
+    let startTime, timerInterval;
+
+    const recBtn = document.getElementById('recordMicBtn');
+    const micStatus = document.getElementById('micStatusBadge');
+    const timerEl = document.getElementById('recordingTimer');
+    const vumeter = document.getElementById('vumeterBar');
+    const micActions = document.getElementById('micActions');
+    const sendBtn = document.getElementById('sendMicBtn');
+    const discardBtn = document.getElementById('discardMicBtn');
+
+    if (recBtn) {
+        recBtn.addEventListener('click', async () => {
+            if (!mediaRecorder || mediaRecorder.state === 'inactive') {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    audioChunks = [];
+
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        if (micStatus) {
+                            micStatus.textContent = 'Grabación Lista para Transmitir';
+                            micStatus.className = 'badge bg-warning text-dark px-3 py-2 fs-6 mb-3';
+                        }
+                        if (micActions) {
+                            micActions.classList.remove('d-none');
+                            micActions.classList.add('d-flex');
+                        }
+                    };
+
+                    // VU Meter
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+                    analyser.smoothingTimeConstant = 0.8;
+                    analyser.fftSize = 1024;
+
+                    microphone.connect(analyser);
+                    analyser.connect(javascriptNode);
+                    javascriptNode.connect(audioContext.destination);
+
+                    javascriptNode.onaudioprocess = () => {
+                        const array = new Uint8Array(analyser.frequencyBinCount);
+                        analyser.getByteFrequencyData(array);
+                        let values = 0;
+                        for (let i = 0; i < array.length; i++) values += array[i];
+                        const average = values / array.length;
+                        if (vumeter) vumeter.style.width = Math.min(100, Math.round(average * 2.2)) + '%';
+                    };
+
+                    mediaRecorder.start();
+                    startTime = Date.now();
+                    timerInterval = setInterval(() => {
+                        const diff = Math.floor((Date.now() - startTime) / 1000);
+                        const m = String(Math.floor(diff / 60)).padStart(2, '0');
+                        const s = String(diff % 60).padStart(2, '0');
+                        if (timerEl) timerEl.textContent = `${m}:${s}`;
+                    }, 1000);
+
+                    recBtn.classList.replace('btn-danger', 'btn-outline-danger');
+                    recBtn.style.transform = 'scale(1.1)';
+                    if (micStatus) {
+                        micStatus.textContent = '🔴 GRABANDO EN VIVO...';
+                        micStatus.className = 'badge bg-danger px-3 py-2 fs-6 mb-3';
+                    }
+                    if (timerEl) timerEl.classList.remove('d-none');
+                } catch (err) {
+                    alert('No se pudo acceder al micrófono: ' + err.message);
+                }
+            } else if (mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                clearInterval(timerInterval);
+                if (javascriptNode) javascriptNode.disconnect();
+                if (analyser) analyser.disconnect();
+                recBtn.style.transform = 'scale(1)';
+            }
+        });
+
+        if (sendBtn) {
+            sendBtn.addEventListener('click', () => {
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const formData = new FormData();
+                formData.append('mic_audio', blob, 'mic_recording.webm');
+
+                sendBtn.disabled = true;
+                sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Transmitiendo...';
+
+                const targetUrl = window.location.pathname.replace(/\/autodj$/, '') + '/autodj/broadcast-mic';
+
+                fetch(targetUrl, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(r => r.json())
+                .then(j => {
+                    alert(j.message || 'Voz transmitida al aire.');
+                    location.reload();
+                })
+                .catch(e => alert('Error al enviar voz al aire: ' + e.message));
+            });
+        }
+
+        if (discardBtn) {
+            discardBtn.addEventListener('click', () => location.reload());
+        }
+    }
+});
 </script>
