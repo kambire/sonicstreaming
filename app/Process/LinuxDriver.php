@@ -21,8 +21,8 @@ final class LinuxDriver implements ProcessController
 
     private function systemctl(string $action, array $station): array
     {
-        $unit = escapeshellarg($this->unit($station));
-        $cmd  = 'sudo systemctl ' . escapeshellarg($action) . ' ' . $unit . ' 2>&1';
+        $unit = escapeshellarg('shoutcast@' . (int) $station['id']);
+        $cmd  = 'sudo -n /usr/bin/systemctl ' . escapeshellarg($action) . ' ' . $unit . ' 2>&1';
         $out  = [];
         $code = 0;
         @exec($cmd, $out, $code);

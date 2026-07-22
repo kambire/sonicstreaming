@@ -214,10 +214,10 @@ final class AutoDjService
     // ---- linux (systemd) ----
     private function systemctl(string $action, int $sid): array
     {
-        $unit = escapeshellarg('liquidsoap@' . $sid . '.service');
+        $unit = escapeshellarg('liquidsoap@' . $sid);
         $out = [];
         $code = 0;
-        @exec('sudo systemctl ' . escapeshellarg($action) . ' ' . $unit . ' 2>&1', $out, $code);
+        @exec('sudo -n /usr/bin/systemctl ' . escapeshellarg($action) . ' ' . $unit . ' 2>&1', $out, $code);
         return ['ok' => $code === 0, 'message' => $code === 0 ? "AutoDJ {$action} ok." : ('systemctl: ' . implode(' ', $out))];
     }
 
