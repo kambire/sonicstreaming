@@ -26,6 +26,9 @@ APP_KEY="$(openssl rand -hex 32)"
 APP_TZ="${APP_TZ:-America/Bogota}"
 
 SHOUTCAST_DIR="/opt/shoutcast"
+# Auto-deploy: el cron revisa GitHub cada minuto y actualiza si hay cambios.
+# Ponlo en 0 para desactivarlo:  sudo AUTO_DEPLOY=0 bash install.sh
+AUTO_DEPLOY="${AUTO_DEPLOY:-1}"
 # HTTPS con certificado autofirmado (no requiere puerto 80 ni dominio).
 SSL_DIR="/etc/ssl/sonicstreaming"
 SSL_CERT="${SSL_DIR}/cert.pem"
@@ -145,6 +148,11 @@ mkdir -p "$APP_DIR"/storage/{configs,pids,logs,media,backups}
 chown -R "${WEB_USER}:${WEB_USER}" "$APP_DIR"
 find "$APP_DIR/storage" -type d -exec chmod 775 {} \;
 chown "${WEB_USER}:${WEB_USER}" "$APP_DIR/.env"
+# Git seguro para el usuario web (necesario para el auto-deploy) y scripts ejecutables
+if command -v git >/dev/null 2>&1; then
+    git config --system --add safe.directory "$APP_DIR" 2>/dev/null || true
+fi
+[ -f "$APP_DIR/deploy.sh" ] && chmod +x "$APP_DIR/deploy.sh"
 info "Permisos aplicados (propietario ${WEB_USER})."
 
 # ==========================================================================
@@ -367,6 +375,15 @@ CRON
 chmod 644 /etc/cron.d/sonicstreaming
 info "Backup, logrotate y cron instalados."
 
+# Auto-deploy desde GitHub (sondeo cada minuto)
+if [ "${AUTO_DEPLOY}" = "1" ] && [ -f "${APP_DIR}/deploy.sh" ]; then
+    cat >> /etc/cron.d/sonicstreaming <<CRON2
+# Auto-deploy: revisa GitHub cada minuto y actualiza si hay cambios
+* * * * * ${WEB_USER} /usr/bin/flock -n /tmp/ss_deploy.lock ${APP_DIR}/deploy.sh >> ${APP_DIR}/storage/logs/deploy.log 2>&1
+CRON2
+    info "Auto-deploy ACTIVADO (revisa GitHub cada minuto)."
+fi
+
 # ==========================================================================
 # 11. Firewall (si ufw esta activo)
 # ==========================================================================
@@ -399,6 +416,9 @@ echo -e " DB usuario:    ${DB_USER}"
 echo -e " DB password:   ${DB_PASS}"
 echo -e "   (guardada tambien en ${APP_DIR}/.env)"
 echo ""
+if [ "${AUTO_DEPLOY}" = "1" ]; then
+    echo -e " Auto-deploy:  ${GREEN}ACTIVADO${NC} (revisa GitHub y actualiza cada minuto)"
+fi
 if [ ! -x "${SHOUTCAST_DIR}/sc_serv" ]; then
     echo -e " ${YELLOW}Pendiente:${NC} coloca el binario Shoutcast en ${SHOUTCAST_DIR}/sc_serv"
     echo -e "            para poder iniciar estaciones."

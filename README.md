@@ -100,6 +100,7 @@ El panel, el AutoDJ, las estadísticas y la facturación funcionan sin él; solo
 | **systemd** | Unidades plantilla `shoutcast@<id>` y `liquidsoap@<id>` (una por estación). |
 | **sudoers** | Permite a `www-data` iniciar/detener/reiniciar esas unidades sin contraseña. |
 | **Cron** | Estadísticas (cada minuto), facturación (diaria), **backup de BD** (diario) y **restauración tras reinicio**. |
+| **Auto-deploy** | Revisa GitHub cada minuto y **actualiza el panel solo** al detectar cambios en `main` (desactivable con `AUTO_DEPLOY=0`). |
 | **logrotate** | Rotación semanal de los logs del panel. |
 | **Firewall (ufw)** | Abre el 7000 y el rango de estaciones 8000–8100 (si `ufw` está activo). |
 
@@ -145,13 +146,44 @@ journalctl -u liquidsoap@12 -f
 
 ## Actualizar el panel
 
-Desde tu PC subes cambios a GitHub (`git push`) y en el servidor:
+### Automático (auto-deploy, activado por defecto)
+
+El instalador deja funcionando el **auto-deploy**: el servidor revisa GitHub **cada minuto** y, si hay un commit nuevo en `main`, se actualiza solo (sincroniza el código con el remoto y aplica migraciones). Tú solo haces `git push` desde tu PC:
 
 ```bash
-cd /var/www/sonicstreaming && sudo git pull && sudo bash install.sh
+git add -A && git commit -m "mis cambios" && git push
 ```
 
-Volver a correr `install.sh` es seguro (idempotente): re‑aplica configuración y migraciones sin perder secretos ni datos.
+En ~1 minuto los cambios están en el servidor. Para ver el registro:
+
+```bash
+tail -f /var/www/sonicstreaming/storage/logs/deploy.log
+```
+
+Forzar un despliegue inmediato (sin esperar al minuto):
+
+```bash
+sudo -u www-data bash /var/www/sonicstreaming/deploy.sh
+```
+
+Para **desactivarlo**: reinstala con `sudo AUTO_DEPLOY=0 bash install.sh` o borra la línea de `deploy` en `/etc/cron.d/sonicstreaming`.
+
+> **Repositorio privado:** el auto-pull necesita acceso de lectura sin interacción. Si tu repo es privado, agrega una *deploy key* de solo lectura:
+> ```bash
+> sudo -u www-data ssh-keygen -t ed25519 -f /var/www/.ssh/id_ed25519 -N ""
+> sudo -u www-data cat /var/www/.ssh/id_ed25519.pub   # pégala en GitHub → repo → Settings → Deploy keys
+> cd /var/www/sonicstreaming && sudo -u www-data git remote set-url origin git@github.com:kambire/sonicstreaming.git
+> ```
+
+### Manual
+
+Si prefieres controlar cada actualización tú mismo:
+
+```bash
+cd /var/www/sonicstreaming && sudo -u www-data git pull && sudo bash install.sh
+```
+
+Reinstalar es seguro (idempotente): re‑aplica configuración y migraciones sin perder secretos ni datos.
 
 ---
 
