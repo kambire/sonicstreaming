@@ -183,14 +183,21 @@ Si prefieres actualizar tú mismo **viendo exactamente qué va a cambiar** antes
 cd /var/www/sonicstreaming && sudo bash update.sh
 ```
 
-`update.sh` muestra los **commits nuevos**, los **archivos modificados** y avisa si hay **migraciones** o si cambió `install.sh`; hace un **backup de la base de datos** y pide confirmación. Opciones:
+Al ejecutarlo **sin argumentos** muestra un **menú interactivo** con estas opciones seleccionables:
 
-| Opción | Efecto |
-|--------|--------|
-| `--check` | Solo muestra los cambios, no aplica nada. |
-| `-y`, `--yes` | Aplica sin preguntar. |
-| `--no-backup` | Omite el backup previo de la BD. |
-| `-b <rama>` | Actualiza desde otra rama (por defecto `main`). |
+```
+¿Qué deseas hacer?
+    1)  Ver cambios disponibles      (no aplica nada)
+    2)  Actualizar el panel          (con backup y confirmación)
+    3)  Actualizar sin confirmar     (rápido, con backup)
+    4)  Actualizar sin backup        (pide confirmación)
+    5)  Actualizar desde otra rama
+    0)  Salir
+```
+
+Además muestra los **commits nuevos**, los **archivos modificados** y avisa si hay **migraciones** o si cambió `install.sh`, con **backup previo** de la base de datos.
+
+También puedes saltarte el menú con flags (útil para scripts): `--check`, `-y`/`--yes`, `--no-backup`, `-b <rama>`, `-h`/`--help`.
 
 Alternativa mínima: `sudo -u www-data git pull && sudo bash install.sh` (reinstalar es idempotente y no pierde secretos ni datos).
 

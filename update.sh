@@ -40,6 +40,9 @@ APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BRANCH="main"
 ASSUME_YES=0; CHECK_ONLY=0; DO_BACKUP=1
 
+# Sin argumentos -> mostrar menu interactivo. Con flags -> respetarlos.
+[ $# -eq 0 ] && SHOW_MENU=1 || SHOW_MENU=0
+
 while [ $# -gt 0 ]; do
     case "$1" in
         -y|--yes)     ASSUME_YES=1 ;;
@@ -63,6 +66,35 @@ HELP
     esac
     shift
 done
+
+# ─────────────────────────── Menú ─────────────────────────────
+choose_action() {
+    echo
+    printf '%s\n' "${B}${C}¿Qué deseas hacer?${N}"
+    hr
+    printf '    %s1)%s  Ver cambios disponibles      %s(no aplica nada)%s\n'          "$B" "$N" "$D" "$N"
+    printf '    %s2)%s  Actualizar el panel          %s(con backup y confirmación)%s\n' "$B" "$N" "$D" "$N"
+    printf '    %s3)%s  Actualizar sin confirmar     %s(rápido, con backup)%s\n'       "$B" "$N" "$D" "$N"
+    printf '    %s4)%s  Actualizar sin backup        %s(pide confirmación)%s\n'        "$B" "$N" "$D" "$N"
+    printf '    %s5)%s  Actualizar desde otra rama%s\n'                                "$B" "$N" "$N"
+    printf '    %s0)%s  Salir%s\n'                                                     "$B" "$N" "$N"
+    hr
+    local choice=""
+    printf '  %b %s' "$ico_dot" "Elige una opción [0-5]: "
+    read -r choice || choice=0
+    case "$choice" in
+        1) CHECK_ONLY=1 ;;
+        2) : ;;
+        3) ASSUME_YES=1 ;;
+        4) DO_BACKUP=0 ;;
+        5) local br=""
+           printf '  %b %s' "$ico_dot" "Nombre de la rama [main]: "
+           read -r br || br=""
+           BRANCH="${br:-main}" ;;
+        0) echo; say "Hasta luego."; echo; exit 0 ;;
+        *) warn "Opción no válida, intenta de nuevo."; choose_action ;;
+    esac
+}
 
 START_TS=$(date +%s)
 
@@ -101,6 +133,9 @@ REMOTE_URL="$(run_git remote get-url origin 2>/dev/null || echo '')"
 [ -n "$REMOTE_URL" ] || die "El repositorio no tiene un remoto 'origin'."
 ok "Repositorio:  ${B}$APP_DIR${N}  ${D}(dueno: ${REPO_OWNER:-?})${N}"
 ok "Remoto:       $REMOTE_URL"
+
+# Menu interactivo (si no se pasaron flags)
+[ "$SHOW_MENU" = "1" ] && choose_action
 
 # ────────────────────────── Fetch ─────────────────────────────
 title "2) Consultando GitHub"
