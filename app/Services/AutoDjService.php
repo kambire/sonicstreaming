@@ -211,7 +211,8 @@ final class AutoDjService
         $liq .= "  add(weights=[1.0, 1.0], [fade.initial(duration=3.0, b), fade.final(duration=3.0, a)])\n";
         $liq .= "end\n\n";
 
-        $relayUrl = trim((string) ($station['relay_url'] ?? ''));
+        $rawRelayUrl = trim((string) ($station['relay_url'] ?? ''));
+        $relayUrl = $this->resolveRelayUrl($rawRelayUrl);
         if ($relayUrl !== '') {
             $liq .= "# Fuente de retransmision Relay externa (re-transmite streams MP3/AAC/M3U/Icecast/Shoutcast)\n";
             $liq .= "relay_stream = mksafe(input.http(\"{$relayUrl}\"))\n\n";
@@ -391,6 +392,49 @@ final class AutoDjService
             @unlink($pidFile);
         }
         return ['ok' => true, 'message' => 'AutoDJ detenido.'];
+    }
+
+    /** Resuelve URLs de reproduccion M3U / PLS a URLs directas de stream de audio */
+    public function resolveRelayUrl(string $url): string
+    {
+        $url = trim($url);
+        if ($url === '') {
+            return '';
+        }
+
+        if (preg_match('/\.(m3u|pls)(\?.*)?$/i', $url)) {
+            $context = stream_context_create([
+                'http' => [
+                    'method'  => 'GET',
+                    'header'  => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64)\r\n",
+                    'timeout' => 5,
+                ],
+                'ssl' => [
+                    'verify_peer'      => false,
+                    'verify_peer_name' => false,
+                ],
+            ]);
+            $content = @file_get_contents($url, false, $context);
+            if ($content) {
+                $lines = explode("\n", str_replace("\r", "", $content));
+                foreach ($lines as $line) {
+                    $l = trim($line);
+                    if ($l !== '' && !str_starts_with($l, '#') && !str_starts_with($l, '[')) {
+                        if (str_starts_with(strtolower($l), 'file1=')) {
+                            $target = trim(substr($l, 6));
+                            if (filter_var($target, FILTER_VALIDATE_URL)) {
+                                return $target;
+                            }
+                        }
+                        if (filter_var($l, FILTER_VALIDATE_URL)) {
+                            return $l;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $url;
     }
 
     /** Escapa comillas para insertar en el script .liq. */

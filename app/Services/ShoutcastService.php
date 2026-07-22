@@ -49,8 +49,13 @@ final class ShoutcastService
         $logPath   = BASE_PATH . '/storage/logs/station_' . (int) $station['id'] . '_sc.log';
 
         $relayLine = '';
-        if (($station['type'] ?? 'live') === 'relay' && !empty($station['relay_url'])) {
-            $relayLine = 'streamrelayurl_1=' . $station['relay_url'];
+        $rawRelay = trim((string) ($station['relay_url'] ?? ''));
+        if ($rawRelay !== '') {
+            $autodjService = new AutoDjService();
+            $resolvedRelay = $autodjService->resolveRelayUrl($rawRelay);
+            if (($station['type'] ?? 'live') === 'relay') {
+                $relayLine = 'streamrelayurl_1=' . $resolvedRelay;
+            }
         }
 
         $replacements = [
