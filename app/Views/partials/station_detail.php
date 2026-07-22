@@ -9,7 +9,13 @@ $base = $base ?? 'admin';
 $showSensitive = $showSensitive ?? true;
 $host = $station['hostname'] ?? '127.0.0.1';
 $port = (int) $station['port'];
-$streamUrl = "http://{$host}:{$port}/stream";
+$reqHost = $_SERVER['HTTP_HOST'] ?? $host;
+$domain = parse_url('https://' . $reqHost, PHP_URL_HOST) ?: $host;
+$webPort = parse_url('https://' . $reqHost, PHP_URL_PORT) ?: 7000;
+
+$streamUrlSsl  = "https://{$domain}:{$webPort}/listen/{$port}/stream";
+$streamUrlHttp = "http://{$domain}:{$port}/stream";
+$adminUrlSsl   = "https://{$domain}:{$webPort}/listen/{$port}/admin.cgi";
 $sid = (int) $station['id'];
 $running = ($station['status'] ?? '') === 'running';
 ?>
@@ -75,19 +81,30 @@ $running = ($station['status'] ?? '') === 'running';
     <!-- Datos de conexion -->
     <div class="col-lg-6">
         <div class="card h-100">
-            <div class="card-header">Datos de conexion</div>
+            <div class="card-header"><i class="bi bi-shield-check text-success"></i> Datos de conexión y Streaming SSL</div>
             <div class="card-body small">
-                <div class="mb-2"><span class="text-muted">URL del stream:</span><br><code class="copyable"><?= e($streamUrl) ?></code></div>
-                <div class="mb-2"><span class="text-muted">Servidor (para tu software DJ):</span><br>
-                    Host <code><?= e($host) ?></code> · Puerto <code><?= $port ?></code> · Mount <code>/stream</code></div>
-                <div class="mb-2"><span class="text-muted">Contrasena de fuente (source):</span><br>
+                <div class="mb-3">
+                    <span class="badge bg-success mb-1"><i class="bi bi-lock-fill"></i> Stream HTTPS / SSL (Navegadores y Web Players)</span><br>
+                    <code class="copyable fs-6 text-success"><?= e($streamUrlSsl) ?></code>
+                    <div class="form-text">Usa esta URL para reproductores HTML5 o sitios web con SSL (HTTPS).</div>
+                </div>
+                <div class="mb-3">
+                    <audio controls preload="none" class="w-100" src="<?= e($streamUrlSsl) ?>"></audio>
+                </div>
+                <div class="mb-2">
+                    <span class="text-muted">Stream Directo HTTP:</span><br>
+                    <code class="copyable"><?= e($streamUrlHttp) ?></code>
+                </div>
+                <div class="mb-2"><span class="text-muted">Servidor DJ / Encoder:</span><br>
+                    Host <code><?= e($domain) ?></code> · Puerto <code><?= $port ?></code> · Mount <code>/stream</code></div>
+                <div class="mb-2"><span class="text-muted">Contraseña de fuente (source):</span><br>
                     <code class="copyable"><?= e($station['source_password']) ?></code></div>
                 <?php if ($showSensitive && !empty($adminPass)): ?>
-                    <div class="mb-2"><span class="text-muted">Panel admin Shoutcast:</span><br>
-                        <code><?= e("http://{$host}:{$port}/admin.cgi") ?></code> · user <code>admin</code> · pass <code class="copyable"><?= e($adminPass) ?></code></div>
+                    <div class="mb-2"><span class="text-muted">Panel Admin Shoutcast (SSL):</span><br>
+                        <code><?= e($adminUrlSsl) ?></code> · user <code>admin</code> · pass <code class="copyable"><?= e($adminPass) ?></code></div>
                 <?php endif; ?>
-                <div><span class="text-muted">Bitrate max:</span> <?= (int) $station['max_bitrate'] ?> kbps ·
-                     <span class="text-muted">Oyentes max:</span> <?= (int) $station['max_listeners'] ?></div>
+                <div><span class="text-muted">Bitrate máx:</span> <?= (int) $station['max_bitrate'] ?> kbps ·
+                     <span class="text-muted">Oyentes máx:</span> <?= (int) $station['max_listeners'] ?></div>
             </div>
         </div>
     </div>
