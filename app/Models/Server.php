@@ -36,6 +36,13 @@ final class Server extends Model
         return null;
     }
 
+    public static function isPortAvailable(int $serverId, int $port, int $ignoreStationId = 0): bool
+    {
+        $stmt = self::db()->prepare('SELECT id FROM stations WHERE server_id = ? AND port = ? AND id <> ? LIMIT 1');
+        $stmt->execute([$serverId, $port, $ignoreStationId]);
+        return !$stmt->fetch();
+    }
+
     public static function activeCount(): int
     {
         return self::count("status = 'active'");

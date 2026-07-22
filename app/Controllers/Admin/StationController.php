@@ -55,10 +55,21 @@ final class StationController extends Controller
             redirect('admin/stations/create');
         }
 
-        $port = Server::nextFreePort($serverId);
-        if ($port === null) {
-            set_flash('danger', 'No hay puertos libres en el servidor seleccionado.');
-            redirect('admin/stations/create');
+        $customPort = $request->int('port', 0);
+        if ($customPort > 0) {
+            if (!Server::isPortAvailable($serverId, $customPort)) {
+                set_flash('danger', "El puerto {$customPort} ya esta en uso en este servidor.");
+                $this->flashOld($request->all());
+                redirect('admin/stations/create');
+            }
+            $port = $customPort;
+        } else {
+            $port = Server::nextFreePort($serverId);
+            if ($port === null) {
+                set_flash('danger', 'No hay puertos libres en el rango del servidor seleccionado.');
+                $this->flashOld($request->all());
+                redirect('admin/stations/create');
+            }
         }
 
         [$maxListeners, $maxBitrate] = $this->applyPlanLimits($request);
@@ -145,6 +156,17 @@ final class StationController extends Controller
             'genre'          => $request->str('genre'),
             'autodj_enabled' => $request->input('autodj_enabled') ? 1 : 0,
         ];
+
+        // Cambio opcional de puerto
+        $newPort = $request->int('port', 0);
+        if ($newPort > 0 && $newPort !== (int) $station['port']) {
+            if (!Server::isPortAvailable((int) $station['server_id'], $newPort, (int) $id)) {
+                set_flash('danger', "El puerto {$newPort} ya esta en uso en este servidor.");
+                redirect('admin/stations/' . $id . '/edit');
+            }
+            $data['port']    = $newPort;
+            $data['dj_port'] = $newPort + 10000;
+        }
 
         // Cambio opcional de contrasenas
         if ($request->str('source_password') !== '') {

@@ -38,17 +38,23 @@ $status = $server['status'] ?? old('status', 'active');
                     <option value="inactive" <?= $status === 'inactive' ? 'selected' : '' ?>>Inactivo</option>
                 </select>
             </div>
-            <div class="col-md-4">
-                <label class="form-label">Puerto inicial</label>
-                <input type="number" name="port_range_start" class="form-control" value="<?= e((string) ($server['port_range_start'] ?? old('port_range_start', '8000'))) ?>">
+            <div class="col-12 mt-4">
+                <h6 class="border-bottom pb-2 text-primary"><i class="bi bi-diagram-3"></i> Configuración de Rango de Puertos</h6>
             </div>
             <div class="col-md-4">
-                <label class="form-label">Puerto final</label>
-                <input type="number" name="port_range_end" class="form-control" value="<?= e((string) ($server['port_range_end'] ?? old('port_range_end', '8100'))) ?>">
+                <label class="form-label">Puerto inicial del rango</label>
+                <input type="number" name="port_range_start" class="form-control" min="1024" max="65535" required value="<?= e((string) ($server['port_range_start'] ?? old('port_range_start', '8000'))) ?>">
+                <div class="form-text">Ej: 8000. Primer puerto a asignar.</div>
             </div>
             <div class="col-md-4">
-                <label class="form-label">Max. streams</label>
-                <input type="number" name="max_streams" class="form-control" value="<?= e((string) ($server['max_streams'] ?? old('max_streams', '50'))) ?>">
+                <label class="form-label">Puerto final del rango</label>
+                <input type="number" name="port_range_end" class="form-control" min="1024" max="65535" required value="<?= e((string) ($server['port_range_end'] ?? old('port_range_end', '8100'))) ?>">
+                <div class="form-text">Ej: 8100. Último puerto a asignar.</div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Máx. estaciones (streams)</label>
+                <input type="number" name="max_streams" class="form-control" min="1" required value="<?= e((string) ($server['max_streams'] ?? old('max_streams', '50'))) ?>">
+                <div class="form-text">Límite de estaciones permitidas.</div>
             </div>
         </div>
         <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-check-lg"></i> Guardar</button></div>

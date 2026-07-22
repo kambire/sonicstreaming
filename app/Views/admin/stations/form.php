@@ -38,14 +38,19 @@ $type   = $station['type'] ?? old('type', 'live');
                     <label class="form-label">Servidor</label>
                     <select name="server_id" class="form-select" required>
                         <?php foreach ($servers as $sv): ?>
-                            <option value="<?= (int) $sv['id'] ?>"><?= e($sv['name']) ?> (<?= e($sv['hostname']) ?>)</option>
+                            <option value="<?= (int) $sv['id'] ?>"><?= e($sv['name']) ?> (Rango: <?= (int) $sv['port_range_start'] ?>–<?= (int) $sv['port_range_end'] ?>)</option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Puerto de emisión <span class="text-muted small">(opcional, vacío = automático según rango)</span></label>
+                    <input type="number" name="port" class="form-control" placeholder="Ej: 8000" value="<?= e((string) old('port')) ?>">
                 </div>
             <?php else: ?>
                 <div class="col-md-6">
                     <label class="form-label">Puerto asignado</label>
-                    <input type="text" class="form-control" value="<?= (int) $station['port'] ?>" disabled>
+                    <input type="number" name="port" class="form-control" value="<?= (int) $station['port'] ?>">
+                    <div class="form-text">Puedes modificar el puerto manualmente si la estación está detenida.</div>
                 </div>
             <?php endif; ?>
 
