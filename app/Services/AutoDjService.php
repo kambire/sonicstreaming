@@ -330,16 +330,19 @@ final class AutoDjService
     public function start(array $station): array
     {
         $sid = (int) $station['id'];
-        $this->generateScript($station);
-        $driver = (string) ($station['driver'] ?? env('SHOUTCAST_DRIVER', 'mock'));
+        Station::update($sid, ['autodj_status' => 'running', 'autodj_enabled' => 1]);
+        $updated = Station::findWithServer($sid) ?: $station;
+
+        $this->generateScript($updated);
+        $driver = (string) ($updated['driver'] ?? env('SHOUTCAST_DRIVER', 'mock'));
 
         $result = match ($driver) {
-            'linux'   => $this->systemctl('start', $sid),
-            'windows' => $this->winStart($station),
+            'linux'   => $this->systemctl('restart', $sid),
+            'windows' => $this->winStart($updated),
             default   => $this->mockSet($sid, true),
         };
         if ($result['ok']) {
-            Station::update($sid, ['autodj_status' => 'running']);
+            ActivityLog::record('autodj_start', 'Station #' . $sid);
         }
         return $result;
     }
@@ -348,15 +351,32 @@ final class AutoDjService
     public function stop(array $station): array
     {
         $sid = (int) $station['id'];
-        $driver = (string) ($station['driver'] ?? env('SHOUTCAST_DRIVER', 'mock'));
+        Station::update($sid, ['autodj_status' => 'stopped']);
+        $updated = Station::findWithServer($sid) ?: $station;
 
-        $result = match ($driver) {
-            'linux'   => $this->systemctl('stop', $sid),
-            'windows' => $this->winStop($sid),
-            default   => $this->mockSet($sid, false),
-        };
+        $this->generateScript($updated);
+        $driver = (string) ($updated['driver'] ?? env('SHOUTCAST_DRIVER', 'mock'));
+
+        $rawRelay = trim((string) ($updated['relay_url'] ?? ''));
+        $relayMode = (string) ($updated['relay_mode'] ?? 'fulltime');
+
+        // Si hay una URL de Relay configurada y activa, Liquidsoap debe mantenerse activo emitiendo el Relay externo
+        if ($rawRelay !== '' && $relayMode !== 'disabled') {
+            $result = match ($driver) {
+                'linux'   => $this->systemctl('restart', $sid),
+                'windows' => $this->winStart($updated),
+                default   => $this->mockSet($sid, false),
+            };
+        } else {
+            $result = match ($driver) {
+                'linux'   => $this->systemctl('stop', $sid),
+                'windows' => $this->winStop($sid),
+                default   => $this->mockSet($sid, false),
+            };
+        }
+
         if ($result['ok']) {
-            Station::update($sid, ['autodj_status' => 'stopped']);
+            ActivityLog::record('autodj_stop', 'Station #' . $sid);
         }
         return $result;
     }
