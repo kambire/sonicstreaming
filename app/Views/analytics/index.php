@@ -203,6 +203,25 @@ $apiUrl = url($base . '/stations/' . $sid . '/analytics/api');
     0% { transform: scale(0.3); opacity: 1; }
     100% { transform: scale(2.2); opacity: 0; }
 }
+.custom-map-tooltip-live {
+    background: rgba(13, 27, 42, 0.95) !important;
+    border: 2px solid #2ecc71 !important;
+    color: #2ecc71 !important;
+    font-weight: bold !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+    padding: 3px 8px !important;
+    box-shadow: 0 0 10px rgba(46, 204, 113, 0.6) !important;
+}
+.custom-map-tooltip-hist {
+    background: rgba(13, 27, 42, 0.85) !important;
+    border: 1px solid #3498db !important;
+    color: #3498db !important;
+    font-weight: bold !important;
+    font-size: 11px !important;
+    border-radius: 6px !important;
+    padding: 2px 6px !important;
+}
 </style>
 
 <script>
@@ -260,6 +279,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             fillOpacity: 0.8
                         });
                     }
+
+                    const labelText = `📍 ${m.city || m.country} (${isLive ? '🔴 En vivo' : 'Histórico'})`;
+                    marker.bindTooltip(labelText, {
+                        permanent: true,
+                        direction: 'top',
+                        offset: isLive ? [0, -14] : [0, -6],
+                        className: isLive ? 'custom-map-tooltip-live' : 'custom-map-tooltip-hist'
+                    });
 
                     const popupHtml = `
                         <div style="min-width:190px; font-family:sans-serif; padding:2px;">
