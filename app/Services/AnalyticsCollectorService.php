@@ -25,7 +25,8 @@ final class AnalyticsCollectorService
         $sid = (int) $station['id'];
         $host = (string) ($station['hostname'] ?? env('SHOUTCAST_HOST', '127.0.0.1'));
         $port = (int) $station['port'];
-        $adminPass = (string) ($station['admin_password'] ?? '');
+        $rawAdmin = (string) ($station['admin_password'] ?? '');
+        $adminPass = \App\Services\Crypto::decrypt($rawAdmin) ?: $rawAdmin;
         $sourcePass = (string) ($station['source_password'] ?? '');
 
         // Consultar clientes conectados via Shoutcast DNAS2 XML con sid=1
