@@ -579,7 +579,7 @@ function deleteSingleTrack(tid) {
     const csrf = document.createElement('input');
     csrf.type = 'hidden';
     csrf.name = 'csrf_token';
-    csrf.value = '<?= \App\Core\Csrf::getToken() ?>';
+    csrf.value = '<?= \App\Core\Csrf::token() ?>';
     form.appendChild(csrf);
     document.body.appendChild(form);
     form.submit();

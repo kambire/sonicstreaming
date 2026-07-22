@@ -17,6 +17,11 @@ final class Csrf
         return $_SESSION['_csrf'];
     }
 
+    public static function getToken(): string
+    {
+        return self::token();
+    }
+
     public static function verify(?string $token): bool
     {
         return is_string($token)
