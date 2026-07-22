@@ -43,6 +43,34 @@ $running = ($station['status'] ?? '') === 'running';
     </div>
 </div>
 
+<!-- Reproductor de Audio Preescuchar al Inicio -->
+<div class="card mb-4 border-0 shadow-lg bg-dark text-white overflow-hidden position-relative" style="background: linear-gradient(135deg, #181c2b 0%, #0d111a 100%); border-left: 4px solid #0dcaf0 !important;">
+    <div class="card-body p-3 p-md-4">
+        <div class="row align-items-center g-3">
+            <div class="col-auto">
+                <div class="rounded-circle bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center text-info shadow-sm" style="width:60px; height:60px; border: 2px solid rgba(13, 202, 240, 0.3);">
+                    <i class="bi bi-disc-fill fs-2"></i>
+                </div>
+            </div>
+            <div class="col">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                    <span class="badge bg-success bg-gradient text-white px-2 py-1"><i class="bi bi-broadcast"></i> EMISIÓN EN VIVO</span>
+                    <span class="badge bg-dark border text-light"><i class="bi bi-lock-fill text-success"></i> HTTPS SSL</span>
+                </div>
+                <h5 class="mb-1 text-white fw-bold"><i class="bi bi-music-note-beamer text-info"></i> Preescuchar Radio: <?= e($station['name']) ?></h5>
+                <div class="small text-white-50 text-truncate" style="max-width:450px;">
+                    <i class="bi bi-music-note"></i> Ahora suena: <strong id="topNowPlaying" class="text-info"><?= e($latest['song_title'] ?? 'Cargando tema en vivo...') ?></strong>
+                </div>
+            </div>
+            <div class="col-12 col-md-auto">
+                <div class="p-2 rounded bg-black bg-opacity-60 border border-secondary shadow-sm">
+                    <audio id="mainAudioPlayer" controls preload="none" style="min-width:280px; height:38px;" src="<?= e($streamUrlSsl) ?>"></audio>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3">
     <!-- Estado en vivo -->
     <div class="col-lg-4">
@@ -209,6 +237,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 document.getElementById('liveListeners').textContent = j.current_listeners ?? 0;
                 document.getElementById('peakListeners').textContent = j.peak_listeners ?? 0;
                 document.getElementById('nowPlaying').textContent = j.song_title || '—';
+                if (document.getElementById('topNowPlaying')) document.getElementById('topNowPlaying').textContent = j.song_title || '—';
                 document.getElementById('upState').innerHTML = j.is_up
                     ? '<span class="badge bg-success">Al aire</span>'
                     : '<span class="badge bg-secondary">Fuera</span>';
