@@ -78,67 +78,114 @@ abstract class BaseAutoDjController extends Controller
         $sid = (int) $id;
         $station = $this->guard($sid);
 
-        if (empty($_FILES['track']) || ($_FILES['track']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
-            set_flash('danger', 'No se recibio ningun archivo valido (revisa el tamano maximo de subida de PHP).');
+        $rawFiles = $_FILES['tracks'] ?? $_FILES['track'] ?? null;
+        if (empty($rawFiles)) {
+            set_flash('danger', 'No se recibio ningun archivo.');
             $this->back($sid);
         }
 
-        $file = $_FILES['track'];
-        $original = (string) $file['name'];
-        $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+        $files = [];
+        if (is_array($rawFiles['name'])) {
+            foreach ($rawFiles['name'] as $idx => $name) {
+                if (!empty($name)) {
+                    $files[] = [
+                        'name'     => $name,
+                        'type'     => $rawFiles['type'][$idx] ?? '',
+                        'tmp_name' => $rawFiles['tmp_name'][$idx] ?? '',
+                        'error'    => $rawFiles['error'][$idx] ?? UPLOAD_ERR_NO_FILE,
+                        'size'     => $rawFiles['size'][$idx] ?? 0,
+                    ];
+                }
+            }
+        } else {
+            $files[] = $rawFiles;
+        }
+
+        if (empty($files)) {
+            set_flash('danger', 'No se selecciono ningun archivo valido.');
+            $this->back($sid);
+        }
+
         $allowed = array_map('trim', explode(',', (string) env('AUTODJ_ALLOWED_EXT', 'mp3,aac,m4a,ogg,flac,wav')));
+        $success = 0;
+        $errors  = [];
 
-        if (!in_array($ext, $allowed, true)) {
-            set_flash('danger', 'Formato no permitido. Permitidos: ' . implode(', ', $allowed));
-            $this->back($sid);
-        }
-        if (!is_uploaded_file($file['tmp_name'])) {
-            set_flash('danger', 'Subida invalida.');
-            $this->back($sid);
-        }
-
-        $size = (int) $file['size'];
-
-        // Cuota de disco segun plan
+        $quotaBytes = 0;
         if (!empty($station['plan_id'])) {
             $plan = Plan::find((int) $station['plan_id']);
             $quotaBytes = (int) ($plan['disk_quota_mb'] ?? 0) * 1024 * 1024;
-            if ($quotaBytes > 0 && (MediaTrack::diskUsage($sid) + $size) > $quotaBytes) {
-                set_flash('danger', 'Superarias la cuota de disco del plan. Elimina pistas o sube el plan.');
-                $this->back($sid);
+        }
+
+        foreach ($files as $file) {
+            $errCode = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+            if ($errCode !== UPLOAD_ERR_OK) {
+                if ($errCode === UPLOAD_ERR_INI_SIZE || $errCode === UPLOAD_ERR_FORM_SIZE) {
+                    $errors[] = "{$file['name']}: supera el limite de tamano de PHP.";
+                } elseif ($errCode !== UPLOAD_ERR_NO_FILE) {
+                    $errors[] = "{$file['name']}: error de subida (codigo {$errCode}).";
+                }
+                continue;
             }
+
+            $original = (string) $file['name'];
+            $ext = strtolower(pathinfo($original, PATHINFO_EXTENSION));
+            if (!in_array($ext, $allowed, true)) {
+                $errors[] = "{$original}: formato no permitido ({$ext}).";
+                continue;
+            }
+            if (!is_uploaded_file($file['tmp_name'])) {
+                $errors[] = "{$original}: subida invalida.";
+                continue;
+            }
+
+            $size = (int) $file['size'];
+            if ($quotaBytes > 0 && (MediaTrack::diskUsage($sid) + $size) > $quotaBytes) {
+                $errors[] = "{$original}: superaria la cuota de disco del plan.";
+                break;
+            }
+
+            $baseName = preg_replace('/[^A-Za-z0-9._-]/', '_', pathinfo($original, PATHINFO_FILENAME));
+            $baseName = trim((string) $baseName, '._-') ?: 'track';
+            $filename = $baseName . '_' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
+
+            $dest = $this->autodj->mediaDir($sid) . '/' . $filename;
+            if (!move_uploaded_file($file['tmp_name'], $dest)) {
+                $errors[] = "{$original}: no se pudo guardar en el servidor.";
+                continue;
+            }
+
+            $title = pathinfo($original, PATHINFO_FILENAME);
+            $artist = null;
+            if (str_contains($title, ' - ')) {
+                [$artist, $title] = array_map('trim', explode(' - ', $title, 2));
+            }
+
+            MediaTrack::create([
+                'station_id'    => $sid,
+                'filename'      => $filename,
+                'original_name' => mb_substr($original, 0, 255),
+                'title'         => mb_substr($title, 0, 255),
+                'artist'        => $artist ? mb_substr($artist, 0, 255) : null,
+                'duration'      => 0,
+                'filesize'      => $size,
+            ]);
+
+            ActivityLog::record('autodj_upload', 'Station #' . $sid . ' ' . $filename);
+            $success++;
         }
 
-        // Nombre seguro y unico
-        $baseName = preg_replace('/[^A-Za-z0-9._-]/', '_', pathinfo($original, PATHINFO_FILENAME));
-        $baseName = trim((string) $baseName, '._-') ?: 'track';
-        $filename = $baseName . '_' . substr(bin2hex(random_bytes(4)), 0, 8) . '.' . $ext;
-
-        $dest = $this->autodj->mediaDir($sid) . '/' . $filename;
-        if (!move_uploaded_file($file['tmp_name'], $dest)) {
-            set_flash('danger', 'No se pudo guardar el archivo.');
-            $this->back($sid);
+        if ($success > 0) {
+            $msg = $success === 1 ? 'Pista subida correctamente.' : "Se subieron {$success} pistas correctamente.";
+            if ($errors) {
+                $msg .= ' Advertencias: ' . implode(' | ', $errors);
+                set_flash('warning', $msg);
+            } else {
+                set_flash('success', $msg);
+            }
+        } else {
+            set_flash('danger', 'No se pudo subir ningun archivo: ' . implode(' | ', $errors));
         }
 
-        // Metadatos basicos a partir del nombre "Artista - Titulo"
-        $title = pathinfo($original, PATHINFO_FILENAME);
-        $artist = null;
-        if (str_contains($title, ' - ')) {
-            [$artist, $title] = array_map('trim', explode(' - ', $title, 2));
-        }
-
-        MediaTrack::create([
-            'station_id'    => $sid,
-            'filename'      => $filename,
-            'original_name' => mb_substr($original, 0, 255),
-            'title'         => mb_substr($title, 0, 255),
-            'artist'        => $artist ? mb_substr($artist, 0, 255) : null,
-            'duration'      => 0,
-            'filesize'      => $size,
-        ]);
-
-        ActivityLog::record('autodj_upload', 'Station #' . $sid . ' ' . $filename);
-        set_flash('success', 'Pista subida: ' . e($original));
         $this->back($sid);
     }
 

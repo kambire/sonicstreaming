@@ -41,10 +41,13 @@ $running = ($station['autodj_status'] ?? 'stopped') === 'running';
                 <form method="post" action="<?= $autodjUrl ?>/upload" enctype="multipart/form-data" class="mb-3">
                     <?= \App\Core\Csrf::field() ?>
                     <div class="input-group">
-                        <input type="file" name="track" class="form-control" accept="audio/*" required>
-                        <button class="btn btn-primary"><i class="bi bi-upload"></i> Subir</button>
+                        <input type="file" name="tracks[]" class="form-control" accept="audio/*" multiple required>
+                        <button class="btn btn-primary"><i class="bi bi-upload"></i> Subir música</button>
                     </div>
-                    <div class="form-text">Formatos: mp3, aac, m4a, ogg, flac, wav. Consejo: nombra los archivos como "Artista - Titulo".</div>
+                    <div class="form-text">
+                        <i class="bi bi-info-circle"></i> Puedes seleccionar <strong>múltiples archivos a la vez</strong> (manteniendo presionado Ctrl o Shift).<br>
+                        Formatos: mp3, aac, m4a, ogg, flac, wav. Recomendación: nombra los archivos como "Artista - Título".
+                    </div>
                 </form>
 
                 <div class="table-responsive">
