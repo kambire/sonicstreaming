@@ -131,9 +131,18 @@ final class AutoDjService
 
         $liq .= "autodj = mksafe(autodj)\n\n";
 
+        // Transición suave entre AutoDJ y DJ en vivo
+        $liq .= "# Funciones de transicion suave entre AutoDJ y DJ en vivo\n";
+        $liq .= "def to_live(a, b) =\n";
+        $liq .= "  add(weights=[1.0, 1.0], [fade.initial(duration=3.0, b), fade.final(duration=3.0, a)])\n";
+        $liq .= "end\n\n";
+        $liq .= "def to_autodj(a, b) =\n";
+        $liq .= "  add(weights=[1.0, 1.0], [fade.initial(duration=3.0, b), fade.final(duration=3.0, a)])\n";
+        $liq .= "end\n\n";
+
         // Entrada de DJ en vivo (harbor)
         $liq .= "live = input.harbor(\"/stream\", port={$djPort}, password=\"{$sourcePass}\")\n";
-        $liq .= "radio = fallback(track_sensitive=false, [live, autodj])\n\n";
+        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, autodj])\n\n";
 
         // Salida hacia Shoutcast (sc_serv) como fuente
         $liq .= "output.shoutcast(\n";
