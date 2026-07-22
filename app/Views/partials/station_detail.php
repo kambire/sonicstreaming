@@ -72,6 +72,69 @@ $running = ($station['status'] ?? '') === 'running';
     </div>
 </div>
 
+<!-- Enlaces de Reproducción y Streaming URL -->
+<div class="card mb-4 shadow-sm border-primary">
+    <div class="card-header bg-primary-subtle text-primary-emphasis fw-bold d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-link-45deg text-primary fs-5 me-1"></i> Direcciones URL de Reproducción y Streaming (HTTPS & HTTP)</span>
+        <span class="badge bg-primary">Enlaces Públicos</span>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-success mb-1">
+                    <i class="bi bi-lock-fill"></i> Stream HTTPS Seguro (Para reproductores web, Apps e iOS)
+                </label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control font-monospace text-success fw-bold" readonly value="<?= e($streamUrlSsl) ?>" id="streamUrlSslInput">
+                    <button class="btn btn-outline-success" onclick="copyInput('streamUrlSslInput', this)" title="Copiar URL HTTPS">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+                <div class="form-text small">Usa este enlace HTTPS para reproductores en sitios web SSL o aplicaciones móviles.</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-info mb-1">
+                    <i class="bi bi-globe"></i> Stream HTTP Estándar (Puerto directo)
+                </label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control font-monospace text-info fw-bold" readonly value="<?= e($streamUrlHttp) ?>" id="streamUrlHttpInput">
+                    <button class="btn btn-outline-info" onclick="copyInput('streamUrlHttpInput', this)" title="Copiar URL HTTP">
+                        <i class="bi bi-clipboard"></i> Copiar
+                    </button>
+                </div>
+                <div class="form-text small">Usa este enlace para reproductores de escritorio tradicionales (Winamp, VLC, TuneIn).</div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-warning mb-1">
+                    <i class="bi bi-gear-wide-connected"></i> Panel de Administración Shoutcast DNAS v2 (HTTPS)
+                </label>
+                <div class="input-group input-group-sm mb-1">
+                    <input type="text" class="form-control font-monospace text-warning fw-bold" readonly value="<?= e($adminUrlSsl) ?>" id="adminUrlSslInput">
+                    <a href="<?= e($adminUrlSsl) ?>" target="_blank" class="btn btn-outline-warning" title="Abrir Admin DNAS">
+                        <i class="bi bi-box-arrow-up-right"></i> Abrir
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label small fw-bold text-light mb-1">
+                    <i class="bi bi-file-earmark-music"></i> Listas de Reproducción (.M3U / .PLS)
+                </label>
+                <div class="d-flex gap-2">
+                    <a href="<?= e($streamUrlSsl) ?>.m3u" class="btn btn-sm btn-outline-light flex-fill" target="_blank">
+                        <i class="bi bi-download"></i> Descargar Playlist .M3U
+                    </a>
+                    <a href="<?= e($streamUrlSsl) ?>.pls" class="btn btn-sm btn-outline-light flex-fill" target="_blank">
+                        <i class="bi bi-download"></i> Descargar Playlist .PLS
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-3">
     <!-- Estado en vivo -->
     <div class="col-lg-4">
