@@ -198,7 +198,7 @@ final class AutoDjService
 
         // Entrada de DJ en vivo (harbor)
         $liq .= "live = input.harbor(\"/stream\", port={$djPort}, password=\"{$sourcePass}\")\n";
-        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, autodj])\n\n";
+        $liq .= "radio = fallback(track_sensitive=false, transitions=[to_live, to_autodj], [live, mksafe(autodj)])\n\n";
 
         // Salida hacia Shoutcast (sc_serv) como fuente
         $liq .= "output.shoutcast(\n";
@@ -206,7 +206,7 @@ final class AutoDjService
         $liq .= "  host=\"{$host}\", port={$port},\n";
         $liq .= "  password=\"{$sourcePass}\",\n";
         $liq .= "  name=\"{$name}\", genre=\"{$genre}\",\n";
-        $liq .= "  radio\n";
+        $liq .= "  mksafe(radio)\n";
         $liq .= ")\n";
 
         $path = $this->liqPath($sid);
