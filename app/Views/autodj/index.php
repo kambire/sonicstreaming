@@ -82,12 +82,15 @@ $exactTimePlaylists = array_values(array_filter($playlists, fn($p) => ($p['type'
                 <?php endif; ?>
 
                 <!-- Subir música -->
-                <form method="post" action="<?= $autodjUrl ?>/upload" enctype="multipart/form-data" class="mb-4 p-3 border rounded bg-body-tertiary">
+                <form method="post" id="uploadForm" action="<?= $autodjUrl ?>/upload" enctype="multipart/form-data" class="mb-4 p-3 border rounded bg-body-tertiary" onsubmit="return handleUploadSubmit(event)">
                     <?= \App\Core\Csrf::field() ?>
-                    <label class="form-label fw-bold"><i class="bi bi-cloud-upload text-primary"></i> Subir canciones a la biblioteca</label>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <label class="form-label fw-bold mb-0"><i class="bi bi-cloud-upload text-primary"></i> Subir canciones a la biblioteca</label>
+                        <span class="badge bg-secondary">Máximo 500 canciones</span>
+                    </div>
                     <div class="row g-2 mb-2">
                         <div class="col-md-7">
-                            <input type="file" name="tracks[]" class="form-control" accept="audio/*" multiple required>
+                            <input type="file" id="trackInput" name="tracks[]" class="form-control" accept="audio/*" multiple required>
                         </div>
                         <div class="col-md-5">
                             <select name="playlist_id" class="form-select">
@@ -98,7 +101,7 @@ $exactTimePlaylists = array_values(array_filter($playlists, fn($p) => ($p['type'
                             </select>
                         </div>
                     </div>
-                    <button class="btn btn-primary btn-sm w-100"><i class="bi bi-upload"></i> Subir archivos de música</button>
+                    <button type="submit" id="btnUploadSubmit" class="btn btn-primary btn-sm w-100"><i class="bi bi-upload"></i> Subir archivos de música</button>
                 </form>
 
                 <!-- Acciones masivas -->
@@ -533,7 +536,36 @@ $exactTimePlaylists = array_values(array_filter($playlists, fn($p) => ($p['type'
     </div>
 <?php endforeach; ?>
 
+<!-- OVERLAY DE CARGA E INDEXACIÓN AL SUBIR MÚSICA -->
+<div id="uploadOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-none justify-content-center align-items-center" style="background: rgba(13, 17, 26, 0.92); backdrop-filter: blur(8px); z-index: 99999;">
+    <div class="card bg-dark border-info text-center p-4 shadow-lg text-white" style="max-width: 460px; border-radius: 16px;">
+        <div class="mb-3 position-relative d-inline-block">
+            <div class="spinner-border text-info" style="width: 4.5rem; height: 4.5rem;" role="status"></div>
+            <i class="bi bi-disc-fill text-info position-absolute top-50 start-50 translate-middle fs-2 animate-spin"></i>
+        </div>
+        <h5 class="fw-bold text-info mb-1"><i class="bi bi-cloud-upload"></i> Subiendo e Indexando Canciones</h5>
+        <p class="small text-white-50 mb-3" id="uploadStatusText">Procesando audios MP3 en la biblioteca AutoDJ...<br>Por favor no cierres ni navegues fuera de esta pantalla.</p>
+        <div class="progress bg-secondary bg-opacity-50 mb-2" style="height: 10px; border-radius: 5px;">
+            <div class="progress-bar progress-bar-striped progress-bar-animated bg-info w-100"></div>
+        </div>
+        <div class="small text-info-subtle fw-bold" id="uploadCountText">Límite permitido: Máximo 500 canciones.</div>
+    </div>
+</div>
+
+<style>
+@keyframes spinSlow {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+.animate-spin {
+    animation: spinSlow 3s linear infinite;
+}
+</style>
+
 <script>
+const CURRENT_TRACK_COUNT = <?= (int) count($tracks) ?>;
+const MAX_ALLOWED_TRACKS = 500;
+
 document.addEventListener('DOMContentLoaded', function () {
     const selectAll = document.getElementById('selectAll');
     if (selectAll) {
@@ -542,6 +574,49 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+function handleUploadSubmit(e) {
+    const input = document.getElementById('trackInput');
+    if (!input || !input.files || input.files.length === 0) {
+        alert('Por favor selecciona al menos un archivo de audio para subir.');
+        return false;
+    }
+
+    const fileCount = input.files.length;
+    if (fileCount > MAX_ALLOWED_TRACKS) {
+        alert(`Has seleccionado ${fileCount} archivos. El límite máximo permitido es de 500 canciones.`);
+        return false;
+    }
+
+    if ((CURRENT_TRACK_COUNT + fileCount) > MAX_ALLOWED_TRACKS) {
+        const remaining = MAX_ALLOWED_TRACKS - CURRENT_TRACK_COUNT;
+        if (remaining <= 0) {
+            alert('Has alcanzado el límite máximo de 500 canciones en la estación. Elimina canciones para poder subir nuevas.');
+            return false;
+        }
+        if (!confirm(`La estación ya tiene ${CURRENT_TRACK_COUNT} canciones. Solo se aceptarán las primeras ${remaining} canciones para no superar el límite de 500. ¿Deseas continuar?`)) {
+            return false;
+        }
+    }
+
+    // Mostrar overlay animado de carga
+    const overlay = document.getElementById('uploadOverlay');
+    const statusText = document.getElementById('uploadStatusText');
+    const countText = document.getElementById('uploadCountText');
+
+    if (statusText) {
+        statusText.innerHTML = `Subiendo y procesando <strong>${fileCount}</strong> archivo(s) de audio...<br>Por favor no cierres la ventana.`;
+    }
+    if (countText) {
+        countText.innerText = `Total tras subida: ${Math.min(MAX_ALLOWED_TRACKS, CURRENT_TRACK_COUNT + fileCount)} / 500 canciones.`;
+    }
+    if (overlay) {
+        overlay.classList.remove('d-none');
+        overlay.classList.add('d-flex');
+    }
+
+    return true;
+}
 
 function toggleScheduleFields(select, targetId) {
     const target = document.getElementById(targetId);

@@ -16,6 +16,13 @@ final class MediaTrack extends Model
         return self::where(['station_id' => $stationId], 'created_at DESC');
     }
 
+    public static function countForStation(int $stationId): int
+    {
+        $stmt = self::db()->prepare('SELECT COUNT(*) FROM media_tracks WHERE station_id = ?');
+        $stmt->execute([$stationId]);
+        return (int) $stmt->fetchColumn();
+    }
+
     /** Uso total de disco de la estacion en bytes. */
     public static function diskUsage(int $stationId): int
     {

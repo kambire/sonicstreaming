@@ -121,6 +121,23 @@ abstract class BaseAutoDjController extends Controller
             $this->back($sid);
         }
 
+        $existingCount = MediaTrack::countForStation($sid);
+        if ($existingCount >= 500) {
+            set_flash('danger', 'La estación ha alcanzado el límite máximo de 500 canciones permitidas.');
+            $this->back($sid);
+        }
+
+        if (count($files) > 500) {
+            $files = array_slice($files, 0, 500);
+            $errors[] = 'Se limitó la selección a un máximo de 500 archivos por subida.';
+        }
+
+        $remainingLimit = 500 - $existingCount;
+        if (count($files) > $remainingLimit) {
+            $files = array_slice($files, 0, $remainingLimit);
+            $errors[] = "Solo se procesarán {$remainingLimit} archivo(s) para no superar el límite de 500 canciones.";
+        }
+
         $allowed = array_map('trim', explode(',', (string) env('AUTODJ_ALLOWED_EXT', 'mp3,aac,m4a,ogg,flac,wav')));
         $success = 0;
         $errors  = [];
