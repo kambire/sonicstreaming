@@ -75,12 +75,14 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/autodj/tracks/bulk-delete', 'Admin\\AutoDjController@bulkDeleteTracks', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/bulk-add', 'Admin\\AutoDjController@bulkAddTracks', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists', 'Admin\\AutoDjController@createPlaylist', [$csrf]);
+        $r->post('/admin/stations/{id}/autodj/playlists/{pid}/update', 'Admin\\AutoDjController@updatePlaylist', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/delete', 'Admin\\AutoDjController@deletePlaylist', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/toggle', 'Admin\\AutoDjController@togglePlaylist', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/play', 'Admin\\AutoDjController@playPlaylist', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/clear', 'Admin\\AutoDjController@clearPlaylist', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/tracks', 'Admin\\AutoDjController@addTrack', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/playlists/{pid}/items/{itemId}/remove', 'Admin\\AutoDjController@removeItem', [$csrf]);
+        $r->post('/admin/stations/{id}/autodj/skip', 'Admin\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/start', 'Admin\\AutoDjController@start', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/stop', 'Admin\\AutoDjController@stop', [$csrf]);
 
@@ -112,12 +114,14 @@ return function (Router $router): void {
         $r->post('/client/stations/{id}/autodj/tracks/bulk-delete', 'Client\\AutoDjController@bulkDeleteTracks', [$csrf]);
         $r->post('/client/stations/{id}/autodj/bulk-add', 'Client\\AutoDjController@bulkAddTracks', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists', 'Client\\AutoDjController@createPlaylist', [$csrf]);
+        $r->post('/client/stations/{id}/autodj/playlists/{pid}/update', 'Client\\AutoDjController@updatePlaylist', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/delete', 'Client\\AutoDjController@deletePlaylist', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/toggle', 'Client\\AutoDjController@togglePlaylist', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/play', 'Client\\AutoDjController@playPlaylist', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/clear', 'Client\\AutoDjController@clearPlaylist', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/tracks', 'Client\\AutoDjController@addTrack', [$csrf]);
         $r->post('/client/stations/{id}/autodj/playlists/{pid}/items/{itemId}/remove', 'Client\\AutoDjController@removeItem', [$csrf]);
+        $r->post('/client/stations/{id}/autodj/skip', 'Client\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/client/stations/{id}/autodj/start', 'Client\\AutoDjController@start', [$csrf]);
         $r->post('/client/stations/{id}/autodj/stop', 'Client\\AutoDjController@stop', [$csrf]);
     });
@@ -144,12 +148,14 @@ return function (Router $router): void {
         $r->post('/reseller/stations/{id}/autodj/tracks/bulk-delete', 'Reseller\\AutoDjController@bulkDeleteTracks', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/bulk-add', 'Reseller\\AutoDjController@bulkAddTracks', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists', 'Reseller\\AutoDjController@createPlaylist', [$csrf]);
+        $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/update', 'Reseller\\AutoDjController@updatePlaylist', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/delete', 'Reseller\\AutoDjController@deletePlaylist', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/toggle', 'Reseller\\AutoDjController@togglePlaylist', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/play', 'Reseller\\AutoDjController@playPlaylist', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/clear', 'Reseller\\AutoDjController@clearPlaylist', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/tracks', 'Reseller\\AutoDjController@addTrack', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/playlists/{pid}/items/{itemId}/remove', 'Reseller\\AutoDjController@removeItem', [$csrf]);
+        $r->post('/reseller/stations/{id}/autodj/skip', 'Reseller\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/start', 'Reseller\\AutoDjController@start', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/stop', 'Reseller\\AutoDjController@stop', [$csrf]);
     });

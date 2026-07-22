@@ -58,10 +58,12 @@ final class AutoDjService
         $name = $this->esc((string) $station['name']);
         $genre = $this->esc((string) ($station['genre'] ?? ''));
 
-        // Construir m3u por playlist activa de tipo general
+        // Construir m3u por playlist activa
         $playlists = Playlist::forStation($sid);
         $sources = [];
-        $weights = [];
+        $generalWeights = [];
+        $scheduledSources = [];
+
         foreach ($playlists as $pl) {
             if ((int) $pl['is_active'] !== 1 || $pl['type'] === 'jingle') {
                 continue;
@@ -76,10 +78,18 @@ final class AutoDjService
                 $lines[] = $mediaDir . '/' . $it['filename'];
             }
             file_put_contents($m3u, implode("\n", $lines) . "\n");
+
             $mode = ((int) $pl['shuffle'] === 1) ? 'randomize' : 'normal';
             $var = 'pl_' . (int) $pl['id'];
             $sources[] = "{$var} = playlist(mode=\"{$mode}\", reload_mode=\"watch\", \"{$m3u}\")";
-            $weights[(int) $pl['id']] = ['var' => $var, 'weight' => max(1, (int) $pl['weight'])];
+
+            if ($pl['type'] === 'scheduled' && !empty($pl['start_time']) && !empty($pl['end_time'])) {
+                $startH = str_replace(':', 'h', substr((string) $pl['start_time'], 0, 5));
+                $endH   = str_replace(':', 'h', substr((string) $pl['end_time'], 0, 5));
+                $scheduledSources[] = "({ {$startH}-{$endH} }, {$var})";
+            } else {
+                $generalWeights[(int) $pl['id']] = ['var' => $var, 'weight' => max(1, (int) $pl['weight'])];
+            }
         }
 
         $liq  = "#!/usr/bin/liquidsoap\n";
@@ -89,17 +99,30 @@ final class AutoDjService
 
         if ($sources) {
             $liq .= implode("\n", $sources) . "\n\n";
-            if (count($weights) === 1) {
-                $only = array_values($weights)[0];
-                $liq .= "autodj = {$only['var']}\n";
-            } else {
-                $vars = [];
-                $ws = [];
-                foreach ($weights as $w) {
-                    $vars[] = $w['var'];
-                    $ws[] = (string) $w['weight'];
+
+            if ($generalWeights) {
+                if (count($generalWeights) === 1) {
+                    $only = array_values($generalWeights)[0];
+                    $liq .= "autodj_gen = {$only['var']}\n";
+                } else {
+                    $vars = [];
+                    $ws = [];
+                    foreach ($generalWeights as $w) {
+                        $vars[] = $w['var'];
+                        $ws[]   = (string) $w['weight'];
+                    }
+                    $liq .= "autodj_gen = random(weights=[" . implode(', ', $ws) . "], [" . implode(', ', $vars) . "])\n";
                 }
-                $liq .= "autodj = random(weights=[" . implode(', ', $ws) . "], [" . implode(', ', $vars) . "])\n";
+            } else {
+                $liq .= "autodj_gen = playlist(mode=\"randomize\", reload_mode=\"watch\", \"{$mediaDir}\")\n";
+            }
+
+            if ($scheduledSources) {
+                $scheduledSources[] = "({ true }, autodj_gen)";
+                $schedLines = implode(", ", $scheduledSources);
+                $liq .= "autodj = switch([{$schedLines}])\n";
+            } else {
+                $liq .= "autodj = autodj_gen\n";
             }
         } else {
             // Sin playlists: reproducir todo el directorio de medios.

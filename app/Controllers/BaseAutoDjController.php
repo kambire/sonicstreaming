@@ -229,6 +229,16 @@ abstract class BaseAutoDjController extends Controller
         $this->back($sid);
     }
 
+    public function skipTrack(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $this->autodj->reloadIfRunning($station);
+        ActivityLog::record('autodj_skip', 'Station #' . $sid);
+        set_flash('success', 'Canción saltada. Transmitiendo siguiente tema.');
+        $this->back($sid);
+    }
+
     public function createPlaylist(Request $request, string $id): void
     {
         $sid = (int) $id;
@@ -238,16 +248,47 @@ abstract class BaseAutoDjController extends Controller
             set_flash('danger', 'El nombre de la playlist es obligatorio.');
             $this->back($sid);
         }
+        $type = $request->str('type', 'general') === 'scheduled' ? 'scheduled' : 'general';
+        $startTime = $request->str('start_time');
+        $endTime   = $request->str('end_time');
+
         Playlist::create([
             'station_id' => $sid,
             'name'       => $name,
-            'type'       => 'general',
+            'type'       => $type,
             'shuffle'    => $request->input('shuffle') ? 1 : 0,
             'is_active'  => 1,
             'weight'     => max(1, $request->int('weight', 1)),
+            'start_time' => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
+            'end_time'   => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
         ]);
         $this->autodj->reloadIfRunning($station);
         set_flash('success', 'Playlist creada.');
+        $this->back($sid);
+    }
+
+    public function updatePlaylist(Request $request, string $id, string $pid): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+        $pl = Playlist::find((int) $pid);
+        if ($pl && (int) $pl['station_id'] === $sid) {
+            $name = $request->str('name', $pl['name']);
+            $type = $request->str('type', $pl['type']) === 'scheduled' ? 'scheduled' : 'general';
+            $startTime = $request->str('start_time', $pl['start_time'] ?? '');
+            $endTime   = $request->str('end_time', $pl['end_time'] ?? '');
+
+            Playlist::update((int) $pid, [
+                'name'       => $name,
+                'type'       => $type,
+                'shuffle'    => $request->input('shuffle') ? 1 : 0,
+                'weight'     => max(1, $request->int('weight', (int) $pl['weight'])),
+                'start_time' => $type === 'scheduled' ? ($startTime ?: '00:00') : null,
+                'end_time'   => $type === 'scheduled' ? ($endTime ?: '23:59') : null,
+            ]);
+            $this->autodj->reloadIfRunning($station);
+            set_flash('success', 'Playlist actualizada.');
+        }
         $this->back($sid);
     }
 
