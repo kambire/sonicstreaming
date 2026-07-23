@@ -96,6 +96,7 @@ return function (Router $router): void {
         $r->post('/admin/stations/{id}/autodj/broadcast-mic', 'Admin\\AutoDjController@broadcastMic', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/start', 'Admin\\AutoDjController@start', [$csrf]);
         $r->post('/admin/stations/{id}/autodj/stop', 'Admin\\AutoDjController@stop', [$csrf]);
+        $r->post('/admin/stations/{id}/autodj/bitrate', 'Admin\\AutoDjController@setBitrate', [$csrf]);
 
         // Analiticas (admin)
         $r->get('/admin/stations/{id}/analytics', 'Admin\\AnalyticsController@index');
@@ -142,6 +143,7 @@ return function (Router $router): void {
         $r->post('/client/stations/{id}/autodj/broadcast-mic', 'Client\\AutoDjController@broadcastMic', [$csrf]);
         $r->post('/client/stations/{id}/autodj/start', 'Client\\AutoDjController@start', [$csrf]);
         $r->post('/client/stations/{id}/autodj/stop', 'Client\\AutoDjController@stop', [$csrf]);
+        $r->post('/client/stations/{id}/autodj/bitrate', 'Client\\AutoDjController@setBitrate', [$csrf]);
 
         // Analiticas (cliente)
         $r->get('/client/stations/{id}/analytics', 'Client\\AnalyticsController@index');
@@ -189,6 +191,7 @@ return function (Router $router): void {
         $r->post('/reseller/stations/{id}/autodj/skip', 'Reseller\\AutoDjController@skipTrack', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/start', 'Reseller\\AutoDjController@start', [$csrf]);
         $r->post('/reseller/stations/{id}/autodj/stop', 'Reseller\\AutoDjController@stop', [$csrf]);
+        $r->post('/reseller/stations/{id}/autodj/bitrate', 'Reseller\\AutoDjController@setBitrate', [$csrf]);
 
         // Analiticas (reseller)
         $r->get('/reseller/stations/{id}/analytics', 'Reseller\\AnalyticsController@index');

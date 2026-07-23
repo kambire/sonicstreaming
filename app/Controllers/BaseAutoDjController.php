@@ -329,6 +329,34 @@ abstract class BaseAutoDjController extends Controller
         $this->back($sid);
     }
 
+    /** Ajusta el bitrate (calidad de emision MP3) del AutoDJ y regenera el stream. */
+    public function setBitrate(Request $request, string $id): void
+    {
+        $sid = (int) $id;
+        $station = $this->guard($sid);
+
+        $max = (int) $station['max_bitrate'];
+        $allowed = array_values(array_filter([32, 48, 64, 96, 128, 160, 192, 256, 320], fn($b) => $b <= $max));
+        if (empty($allowed)) {
+            $allowed = [$max];
+        }
+
+        $bitrate = $request->int('bitrate', $max);
+        if (!in_array($bitrate, $allowed, true)) {
+            $bitrate = min($bitrate > 0 ? $bitrate : $max, $max);
+        }
+
+        Station::update($sid, ['bitrate' => $bitrate]);
+        ActivityLog::record('autodj_bitrate', "Station #{$sid} -> {$bitrate}k");
+
+        // Regenerar el .liq y recargar Liquidsoap si esta al aire
+        $updated = Station::findWithServer($sid) ?: $station;
+        $this->autodj->reloadIfRunning($updated);
+
+        set_flash('success', "Calidad de emisión del AutoDJ ajustada a {$bitrate} kbps.");
+        $this->back($sid);
+    }
+
     public function showPlaylist(Request $request, string $id, string $pid): void
     {
         $sid = (int) $id;

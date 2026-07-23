@@ -54,7 +54,14 @@ final class AutoDjService
         $host = $station['hostname'] ?? env('SHOUTCAST_HOST', '127.0.0.1');
         $port = (int) $station['port'];
         $djPort = (int) ($station['dj_port'] ?? ($port + 10000));
-        $bitrate = (int) $station['max_bitrate'];
+        // Bitrate de emision del AutoDJ: usa el configurado si existe, si no el max de la estacion.
+        // Nunca supera el limite (max_bitrate) del plan/estacion.
+        $maxBitrate = (int) $station['max_bitrate'];
+        $bitrate = (int) ($station['bitrate'] ?? 0);
+        if ($bitrate <= 0) {
+            $bitrate = $maxBitrate;
+        }
+        $bitrate = min($bitrate, $maxBitrate);
         $sourcePass = (string) $station['source_password'];
         $name = $this->esc((string) $station['name']);
         $genre = $this->esc((string) ($station['genre'] ?? ''));

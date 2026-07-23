@@ -21,15 +21,32 @@ $exactTimePlaylists = array_values(array_filter($playlists, fn($p) => ($p['type'
             <?= $running ? '<span class="badge bg-success"><i class="bi bi-broadcast"></i> Transmitiendo al aire</span>' : '<span class="badge bg-secondary">Detenido</span>' ?>
         </h5>
     </div>
-    <div class="btn-group">
-        <?php if ($running): ?>
-            <form method="post" action="<?= $autodjUrl ?>/skip"><?= \App\Core\Csrf::field() ?>
-                <button class="btn btn-sm btn-warning" title="Saltar a la siguiente canción al aire"><i class="bi bi-skip-end-fill"></i> Saltar Tema</button></form>
-        <?php endif; ?>
-        <form method="post" action="<?= $autodjUrl ?>/start"><?= \App\Core\Csrf::field() ?>
-            <button class="btn btn-sm btn-success" <?= $running ? 'disabled' : '' ?>><i class="bi bi-play-fill"></i> Iniciar AutoDJ</button></form>
-        <form method="post" action="<?= $autodjUrl ?>/stop"><?= \App\Core\Csrf::field() ?>
-            <button class="btn btn-sm btn-danger" <?= $running ? '' : 'disabled' ?>><i class="bi bi-stop-fill"></i> Detener</button></form>
+    <div class="d-flex align-items-center flex-wrap gap-2">
+        <?php
+        $curBitrate = ((int) ($station['bitrate'] ?? 0)) ?: (int) $station['max_bitrate'];
+        $maxBitrate = (int) $station['max_bitrate'];
+        $bitrateOptions = array_values(array_filter([32, 64, 96, 128, 160, 192, 256, 320], fn($b) => $b <= $maxBitrate));
+        if (!in_array($curBitrate, $bitrateOptions, true)) { $bitrateOptions[] = $curBitrate; sort($bitrateOptions); }
+        ?>
+        <form method="post" action="<?= $autodjUrl ?>/bitrate" class="d-flex align-items-center gap-1" title="Calidad de emisión del AutoDJ (bitrate MP3). Tope del plan: <?= $maxBitrate ?> kbps">
+            <?= \App\Core\Csrf::field() ?>
+            <span class="small text-muted d-none d-md-inline"><i class="bi bi-soundwave text-info"></i> Calidad:</span>
+            <select name="bitrate" class="form-select form-select-sm" style="width:auto" onchange="this.form.submit()">
+                <?php foreach ($bitrateOptions as $b): ?>
+                    <option value="<?= $b ?>" <?= $b === $curBitrate ? 'selected' : '' ?>><?= $b ?> kbps</option>
+                <?php endforeach; ?>
+            </select>
+        </form>
+        <div class="btn-group">
+            <?php if ($running): ?>
+                <form method="post" action="<?= $autodjUrl ?>/skip"><?= \App\Core\Csrf::field() ?>
+                    <button class="btn btn-sm btn-warning" title="Saltar a la siguiente canción al aire"><i class="bi bi-skip-end-fill"></i> Saltar Tema</button></form>
+            <?php endif; ?>
+            <form method="post" action="<?= $autodjUrl ?>/start"><?= \App\Core\Csrf::field() ?>
+                <button class="btn btn-sm btn-success" <?= $running ? 'disabled' : '' ?>><i class="bi bi-play-fill"></i> Iniciar AutoDJ</button></form>
+            <form method="post" action="<?= $autodjUrl ?>/stop"><?= \App\Core\Csrf::field() ?>
+                <button class="btn btn-sm btn-danger" <?= $running ? '' : 'disabled' ?>><i class="bi bi-stop-fill"></i> Detener</button></form>
+        </div>
     </div>
 </div>
 
