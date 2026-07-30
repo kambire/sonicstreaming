@@ -103,6 +103,8 @@ final class StationController extends Controller
             if ($logoUrl !== null) {
                 $data['logo_url'] = $logoUrl;
             }
+        } elseif ($request->str('logo_url') !== '') {
+            $data['logo_url'] = $request->str('logo_url');
         }
 
         // Subida opcional de Fondo / Portada
@@ -111,6 +113,8 @@ final class StationController extends Controller
             if ($bgUrl !== null) {
                 $data['background_url'] = $bgUrl;
             }
+        } elseif ($request->str('background_url') !== '') {
+            $data['background_url'] = $request->str('background_url');
         }
 
         // Eliminar logo o fondo si se solicita

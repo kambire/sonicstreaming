@@ -479,7 +479,8 @@ function copyInput(inputId, btn) {
                                 </div>
                             <?php endif; ?>
                             <div class="flex-fill">
-                                <input type="file" name="logo" class="form-control bg-dark text-white border-secondary" accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml">
+                                <input type="file" name="logo" class="form-control bg-dark text-white border-secondary mb-2" accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml">
+                                <input type="url" name="logo_url" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="O pega la URL del Logo (ej. https://...)" value="<?= e($station['logo_url'] ?? '') ?>">
                                 <div class="form-text text-muted small">Formatos: PNG, JPG, WEBP, SVG (Recomendado 300x300px, máx. 5MB).</div>
                             </div>
                         </div>
@@ -499,7 +500,8 @@ function copyInput(inputId, btn) {
                         <?php if (!empty($station['background_url'])): ?>
                             <div class="mb-2 rounded border border-secondary overflow-hidden" style="height: 90px; background: url('<?= e(url($station['background_url'])) ?>') center/cover no-repeat;"></div>
                         <?php endif; ?>
-                        <input type="file" name="background" class="form-control bg-dark text-white border-secondary" accept="image/png, image/jpeg, image/webp, image/gif">
+                        <input type="file" name="background" class="form-control bg-dark text-white border-secondary mb-2" accept="image/png, image/jpeg, image/webp, image/gif">
+                        <input type="url" name="background_url" class="form-control form-control-sm bg-dark text-white border-secondary" placeholder="O pega la URL del Fondo (ej. https://...)" value="<?= e($station['background_url'] ?? '') ?>">
                         <div class="form-text text-muted small">Formatos: JPG, PNG, WEBP (Recomendado 1920x1080px, máx. 5MB).</div>
 
                         <?php if (!empty($station['background_url'])): ?>

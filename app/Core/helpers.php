@@ -43,11 +43,11 @@ function base_url(): string
     return $base;
 }
 
-/**
- * Construye una URL interna a partir de una ruta.
- */
 function url(string $path = ''): string
 {
+    if (preg_match('/^https?:\/\//i', $path)) {
+        return $path;
+    }
     return base_url() . '/' . ltrim($path, '/');
 }
 
