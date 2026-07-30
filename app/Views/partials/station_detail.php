@@ -33,6 +33,10 @@ $autodjRunning = ($station['autodj_status'] ?? 'stopped') === 'running';
     </div>
     
     <div class="btn-toolbar gap-2">
+        <button type="button" class="btn btn-sm btn-primary fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#stationImagesModal">
+            <i class="bi bi-image me-1"></i> 🎨 Imagen & Fondo
+        </button>
+
         <button type="button" class="btn btn-sm btn-danger fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#micStudioModal">
             <i class="bi bi-mic-fill me-1"></i> 🎙️ Hablar en Vivo
         </button>
@@ -68,14 +72,23 @@ $autodjRunning = ($station['autodj_status'] ?? 'stopped') === 'running';
     </div>
 </div>
 
-<!-- REPRODUCTOR WEB DE PREESCUCHA -->
-<div class="card mb-4 border-0 shadow-sm text-white overflow-hidden" style="background: linear-gradient(135deg, #141923 0%, #0d111a 100%); border-left: 4px solid #0dcaf0 !important;">
+<!-- REPRODUCTOR WEB DE PREESCUCHA CON LOGO Y FONDO PERSONALIZADO -->
+<?php
+$bgStyle = !empty($station['background_url'])
+    ? "background: linear-gradient(135deg, rgba(11, 15, 25, 0.82) 0%, rgba(13, 17, 26, 0.94) 100%), url('" . e(url($station['background_url'])) . "') center/cover no-repeat;"
+    : "background: linear-gradient(135deg, #141923 0%, #0d111a 100%);";
+?>
+<div class="card mb-4 border-0 shadow-sm text-white overflow-hidden" style="<?= $bgStyle ?> border-left: 4px solid #0dcaf0 !important;">
     <div class="card-body p-3 p-md-4">
         <div class="row align-items-center g-3">
             <div class="col-auto">
-                <div class="rounded-circle bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center text-info shadow-sm" style="width:58px; height:58px; border: 2px solid rgba(13, 202, 240, 0.25);">
-                    <i class="bi bi-disc-fill fs-2"></i>
-                </div>
+                <?php if (!empty($station['logo_url'])): ?>
+                    <img src="<?= e(url($station['logo_url'])) ?>" alt="Logo Radio" class="rounded-circle shadow-sm object-fit-cover" style="width:58px; height:58px; border: 2px solid rgba(13, 202, 240, 0.5);">
+                <?php else: ?>
+                    <div class="rounded-circle bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center text-info shadow-sm" style="width:58px; height:58px; border: 2px solid rgba(13, 202, 240, 0.25);">
+                        <i class="bi bi-disc-fill fs-2"></i>
+                    </div>
+                <?php endif; ?>
             </div>
             <div class="col">
                 <div class="d-flex align-items-center gap-2 mb-1">
@@ -427,6 +440,80 @@ function copyInput(inputId, btn) {
                 <div class="modal-footer border-secondary border-opacity-25">
                     <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-sm btn-success fw-bold"><i class="bi bi-check-lg me-1"></i> Guardar y Aplicar Relay</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL INTERACTIVO DE CARGA DE IMÁGENES (LOGO E ÍCONO DE RADIO + FONDO/PORTADA) -->
+<div class="modal fade" id="stationImagesModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-dark border-info text-white shadow-lg" style="border-radius: 16px;">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold text-info"><i class="bi bi-image-fill me-2"></i> Imagen de Radio & Fondo de Pantalla</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <?php 
+                $userRole = auth()['role'] ?? 'client';
+                $baseRole = ($userRole === 'admin') ? 'admin' : (($userRole === 'reseller') ? 'reseller' : 'client');
+            ?>
+            <form method="post" action="<?= url($baseRole . '/stations/' . $station['id'] . '/settings') ?>" enctype="multipart/form-data">
+                <?= \App\Core\Csrf::field() ?>
+                <div class="modal-body py-4">
+                    <p class="small text-white-50 mb-4">
+                        Personaliza la imagen corporativa de tu radio. El <strong>Ícono / Logo Central</strong> aparecerá en los reproductores y widgets. La <strong>Imagen de Fondo</strong> servirá como portada de la estación.
+                    </p>
+
+                    <!-- LOGO / ICONO CENTRAL -->
+                    <div class="mb-4 p-3 border rounded border-secondary bg-black bg-opacity-25">
+                        <label class="form-label text-light fw-bold">
+                            <i class="bi bi-person-badge text-info me-1"></i> Ícono / Logo Central de la Radio
+                        </label>
+                        <div class="d-flex align-items-center gap-3 mb-2">
+                            <?php if (!empty($station['logo_url'])): ?>
+                                <img src="<?= e(url($station['logo_url'])) ?>" class="rounded-circle border border-info" style="width: 54px; height: 54px; object-fit: cover;">
+                            <?php else: ?>
+                                <div class="rounded-circle bg-secondary bg-opacity-25 d-flex align-items-center justify-content-center" style="width: 54px; height: 54px;">
+                                    <i class="bi bi-disc fs-3 text-muted"></i>
+                                </div>
+                            <?php endif; ?>
+                            <div class="flex-fill">
+                                <input type="file" name="logo" class="form-control bg-dark text-white border-secondary" accept="image/png, image/jpeg, image/webp, image/gif, image/svg+xml">
+                                <div class="form-text text-muted small">Formatos: PNG, JPG, WEBP, SVG (Recomendado 300x300px, máx. 5MB).</div>
+                            </div>
+                        </div>
+                        <?php if (!empty($station['logo_url'])): ?>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="remove_logo" value="1" id="removeLogoCheck">
+                                <label class="form-check-label small text-warning" for="removeLogoCheck"><i class="bi bi-trash me-1"></i> Eliminar logo actual</label>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- FONDO DE PANTALLA / PORTADA -->
+                    <div class="p-3 border rounded border-secondary bg-black bg-opacity-25">
+                        <label class="form-label text-light fw-bold">
+                            <i class="bi bi-image text-success me-1"></i> Imagen de Fondo / Portada de la Radio
+                        </label>
+                        <?php if (!empty($station['background_url'])): ?>
+                            <div class="mb-2 rounded border border-secondary overflow-hidden" style="height: 90px; background: url('<?= e(url($station['background_url'])) ?>') center/cover no-repeat;"></div>
+                        <?php endif; ?>
+                        <input type="file" name="background" class="form-control bg-dark text-white border-secondary" accept="image/png, image/jpeg, image/webp, image/gif">
+                        <div class="form-text text-muted small">Formatos: JPG, PNG, WEBP (Recomendado 1920x1080px, máx. 5MB).</div>
+
+                        <?php if (!empty($station['background_url'])): ?>
+                            <div class="form-check form-switch mt-2">
+                                <input class="form-check-input" type="checkbox" name="remove_background" value="1" id="removeBgCheck">
+                                <label class="form-check-label small text-warning" for="removeBgCheck"><i class="bi bi-trash me-1"></i> Eliminar fondo actual</label>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+                <div class="modal-footer border-secondary border-opacity-25">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-info fw-bold text-dark"><i class="bi bi-cloud-arrow-up-fill me-1"></i> Guardar Imágenes</button>
                 </div>
             </form>
         </div>

@@ -176,10 +176,65 @@ final class StationController extends Controller
             $data['admin_password'] = Crypto::encrypt($request->str('admin_password'));
         }
 
+        // Subida opcional de Logo central
+        if (!empty($_FILES['logo']['tmp_name'])) {
+            $logoUrl = $this->processImageUpload($_FILES['logo'], (int) $id, 'logo');
+            if ($logoUrl !== null) {
+                $data['logo_url'] = $logoUrl;
+            }
+        }
+
+        // Subida opcional de Fondo / Portada
+        if (!empty($_FILES['background']['tmp_name'])) {
+            $bgUrl = $this->processImageUpload($_FILES['background'], (int) $id, 'bg');
+            if ($bgUrl !== null) {
+                $data['background_url'] = $bgUrl;
+            }
+        }
+
+        // Eliminar logo o fondo si se solicita
+        if ($request->input('remove_logo')) {
+            $data['logo_url'] = null;
+        }
+        if ($request->input('remove_background')) {
+            $data['background_url'] = null;
+        }
+
         Station::update((int) $id, $data);
         ActivityLog::record('station_update', 'Station #' . $id);
-        set_flash('success', 'Estacion actualizada. Reiniciala para aplicar cambios de streaming.');
+        set_flash('success', 'Estacion e imágenes actualizadas correctamente.');
         redirect('admin/stations/' . $id);
+    }
+
+    private function processImageUpload(array $file, int $stationId, string $prefix): ?string
+    {
+        if (empty($file['tmp_name']) || $file['error'] !== UPLOAD_ERR_OK) {
+            return null;
+        }
+
+        $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'];
+        $ext = strtolower(pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+        if (!in_array($ext, $allowedExts, true)) {
+            return null;
+        }
+
+        if (($file['size'] ?? 0) > 5 * 1024 * 1024) {
+            return null;
+        }
+
+        $uploadDir = BASE_PATH . '/public/uploads/stations/' . $stationId;
+        if (!is_dir($uploadDir)) {
+            @mkdir($uploadDir, 0755, true);
+        }
+
+        $filename = $prefix . '_' . time() . '.' . $ext;
+        $dest = $uploadDir . '/' . $filename;
+
+        if (@move_uploaded_file($file['tmp_name'], $dest) || @copy($file['tmp_name'], $dest)) {
+            return '/uploads/stations/' . $stationId . '/' . $filename;
+        }
+
+        return null;
     }
 
     public function destroy(Request $request, string $id): void

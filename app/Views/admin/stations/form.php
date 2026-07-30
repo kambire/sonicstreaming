@@ -10,7 +10,7 @@ $type   = $station['type'] ?? old('type', 'live');
 </div>
 
 <div class="card"><div class="card-body">
-    <form method="post" action="<?= $action ?>">
+    <form method="post" action="<?= $action ?>" enctype="multipart/form-data">
         <?= \App\Core\Csrf::field() ?>
         <?php if ($isEdit): ?><input type="hidden" name="_method" value="PUT"><?php endif; ?>
 
