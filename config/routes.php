@@ -213,4 +213,7 @@ return function (Router $router): void {
         $r->get('/api/stations/{id}/stats', 'Api\\StatsController@station');
         $r->get('/api/stations/{id}/history', 'Api\\StatsController@history');
     });
+
+    // API pública/privada de subida para paneles externos
+    $router->post('/api/admin/upload', 'Api\\UploadController@upload');
 };
